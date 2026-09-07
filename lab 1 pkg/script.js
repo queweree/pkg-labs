@@ -239,7 +239,7 @@ function runTests() {
     return results;
 }
 class ColorApp {
-    constructor() {
+        constructor() {
         this.testResultsDiv = document.getElementById('testResults');
         this.colorPreview = document.getElementById('colorPreview');
         this.illuminantSelect = document.getElementById('illuminantSelect');
@@ -290,12 +290,16 @@ class ColorApp {
                 this.onParamChange(model, comp, val);
             });
         });
-        
+        this.colorPicker.addEventListener('input', () => {
+            const rgb = Model.hexToRgb(this.colorPicker.value);
+            if (rgb) this.setFromRgb(rgb.r, rgb.g, rgb.b, 'picker');
+        });
+        this.illuminantSelect.addEventListener('change', () => this.fullUpdate());
+        this.strategySelect.addEventListener('change', () => this.fullUpdate());
         this.setFromRgb(255, 0, 0, 'init');
         this.updateGradients();
         this.updateWarning();
     }
-
     runTests() {
         const results = runTests();
         let output = '🔬 Результаты автотестов:\n';
