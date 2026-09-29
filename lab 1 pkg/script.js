@@ -187,6 +187,7 @@ const Model = (() => {
         rgbToHex
     };
 })();
+
 function runTests() {
     const results = [];
     const assert = (cond, msg) => {
@@ -194,74 +195,68 @@ function runTests() {
     };
 
     const dataD65 = Model.getIlluminantData('D65');
-    // Тест 1: эталонные координаты красного sRGB для D65.
     const xyz1 = Model.rgbToXyz(255,0,0, dataD65.rgb2xyz);
     assert(Math.abs(xyz1.X - 41.2456) < 0.01 && Math.abs(xyz1.Y - 21.2673) < 0.01 && Math.abs(xyz1.Z - 1.9334) < 0.01,
         'RGB(255,0,0) -> XYZ (D65) совпадает с эталоном');
 
-    // Тест 2: эталонные координаты LAB красного для D65.
     const lab1 = Model.xyzToLab(xyz1.X, xyz1.Y, xyz1.Z, dataD65.white);
     assert(Math.abs(lab1.L - 53.2408) < 0.02 && Math.abs(lab1.a - 80.0925) < 0.02 && Math.abs(lab1.b - 67.2032) < 0.02,
         'XYZ -> LAB (D65) совпадает с эталоном для красного');
 
-    // Тест 3: RGB(255,0,0) -> XYZ -> RGB (D65, clip)
     const rgbBack = Model.xyzToRgb(xyz1.X, xyz1.Y, xyz1.Z, dataD65.xyz2rgb, 'clip');
     assert(Math.abs(rgbBack.r - 255) < 0.5 && Math.abs(rgbBack.g) < 0.5 && Math.abs(rgbBack.b) < 0.5,
         'RGB(255,0,0) -> XYZ -> RGB (D65, clip) даёт исходный');
 
-    // Тест 4: XYZ -> LAB -> XYZ (D65)
     const xyz2 = Model.labToXyz(lab1.L, lab1.a, lab1.b, dataD65.white);
     assert(Math.abs(xyz2.X - xyz1.X) < 0.1 && Math.abs(xyz2.Y - xyz1.Y) < 0.1 && Math.abs(xyz2.Z - xyz1.Z) < 0.1,
         'XYZ -> LAB -> XYZ (D65) даёт исходный (погрешность <0.1)');
 
-    // Тест 5: RGB -> HSL -> RGB (красный)
     const hsl1 = Model.rgbToHsl(255,0,0);
     const rgb3 = Model.hslToRgb(hsl1.h, hsl1.s, hsl1.l);
     assert(Math.abs(rgb3.r - 255) < 0.5 && Math.abs(rgb3.g) < 0.5 && Math.abs(rgb3.b) < 0.5,
         'RGB(255,0,0) -> HSL -> RGB даёт исходный');
 
-    // Тест 6: обратимость для белого при D50 (проверка согласованности матриц)
     const dataD50 = Model.getIlluminantData('D50');
     const xyzWhite = Model.rgbToXyz(255,255,255, dataD50.rgb2xyz);
     const rgbBackWhite = Model.xyzToRgb(xyzWhite.X, xyzWhite.Y, xyzWhite.Z, dataD50.xyz2rgb, 'clip');
     assert(Math.abs(rgbBackWhite.r - 255) < 0.5 && Math.abs(rgbBackWhite.g - 255) < 0.5 && Math.abs(rgbBackWhite.b - 255) < 0.5,
         'RGB(255,255,255) -> XYZ (D50) -> RGB (D50, clip) даёт исходный');
 
-    // Тест 7: стратегия scaling — все каналы в [0,255]
     const rgbScale = Model.xyzToRgb(100,100,100, dataD65.xyz2rgb, 'scale');
     assert(rgbScale.r >= 0 && rgbScale.r <= 255 && rgbScale.g >= 0 && rgbScale.g <= 255 && rgbScale.b >= 0 && rgbScale.b <= 255,
         'Масштабирование приводит все каналы в [0,255]');
 
-    // Тест 8: масштабирование помечает clipped=true
     const rgbScale2 = Model.xyzToRgb(200, 50, 50, dataD65.xyz2rgb, 'scale');
     assert(rgbScale2.clipped === true,
         'Масштабирование помечает clipped=true при выходе за границы');
     return results;
 }
+
 class ColorApp {
-        constructor() {
+    constructor() {
         this.testResultsDiv = document.getElementById('testResults');
         this.colorPreview = document.getElementById('colorPreview');
         this.illuminantSelect = document.getElementById('illuminantSelect');
         this.strategySelect = document.getElementById('clampStrategy');
         this.colorPicker = document.getElementById('colorPicker');
         this.warningDiv = document.getElementById('warningMessage');
-        
+
         this.state = {
             rgb: { r: 255, g: 0, b: 0 },
             xyz: { X: 41.24, Y: 21.26, Z: 1.93 },
             lab: { L: 53.24, a: 80.09, b: 67.20 },
             hsl: { h: 0, s: 1, l: 0.5 }
         };
-        
+
         this.lastClipped = false;
         this.sliders = {};
         this.numberInputs = {};
+        this.pendingInputs = new Set();
         this.gradientCanvases = {};
-        
+
         this.runTests();
         this.colorPreview.style.background = '#ff0000';
-        
+
         document.querySelectorAll('.param').forEach(el => {
             const model = el.dataset.model;
             const comp = el.dataset.component;
@@ -269,27 +264,37 @@ class ColorApp {
             const number = el.querySelector('input[type="number"]');
             const canvas = el.querySelector('canvas');
             const key = model + '.' + comp;
-            
+
             this.sliders[key] = slider;
             this.numberInputs[key] = number;
             this.gradientCanvases[key] = canvas;
-            
+
             slider.addEventListener('input', () => {
+                this.pendingInputs.delete(key);
                 number.value = slider.value;
                 this.onParamChange(model, comp, parseFloat(slider.value));
             });
 
+            number.title = 'Enter — применить; Esc — отменить. Выход из поля также применяет значение.';
             number.addEventListener('input', () => {
-                let val = parseFloat(number.value);
-                if (isNaN(val)) return;
-                const min = parseFloat(slider.min);
-                const max = parseFloat(slider.max);
-                if (val < min) val = min;
-                if (val > max) val = max;
-                slider.value = val;
-                this.onParamChange(model, comp, val);
+                // Храним черновик в поле: не пересчитываем цвет во время набора.
+                this.pendingInputs.add(key);
             });
+            number.addEventListener('keydown', (event) => {
+                if (event.isComposing) return;
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    this.commitNumberInput(model, comp);
+                } else if (event.key === 'Escape') {
+                    event.preventDefault();
+                    this.pendingInputs.delete(key);
+                    this.restoreNumberInput(model, comp);
+                }
+            });
+            number.addEventListener('blur', () => this.commitNumberInput(model, comp));
+
         });
+
         this.colorPicker.addEventListener('input', () => {
             const rgb = Model.hexToRgb(this.colorPicker.value);
             if (rgb) this.setFromRgb(rgb.r, rgb.g, rgb.b, 'picker');
@@ -300,6 +305,48 @@ class ColorApp {
         this.updateGradients();
         this.updateWarning();
     }
+
+    getParamValue(model, comp) {
+        const stateComp = model === 'hsl' ? comp.toLowerCase() : comp;
+        return this.state[model][stateComp];
+    }
+
+    formatParamValue(value, slider) {
+        // Округляем только представление, не значения математического состояния.
+        const decimals = (slider.step.split('.')[1] || '').length;
+        return Number.isFinite(value) ? String(Number(value.toFixed(decimals))) : '0';
+    }
+
+    restoreNumberInput(model, comp) {
+        const key = model + '.' + comp;
+        this.numberInputs[key].value = this.formatParamValue(
+            this.getParamValue(model, comp), this.sliders[key]);
+    }
+
+    commitNumberInput(model, comp) {
+        const key = model + '.' + comp;
+        if (!this.pendingInputs.has(key)) return;
+        this.pendingInputs.delete(key);
+        const input = this.numberInputs[key];
+        const slider = this.sliders[key];
+        const raw = input.value.trim().replace(',', '.');
+        const parsed = Number(raw);
+        if (raw === '' || !Number.isFinite(parsed)) {
+            this.restoreNumberInput(model, comp);
+            this.warningDiv.textContent = 'Введите конечное число. Последний корректный цвет сохранён.';
+            return;
+        }
+        const value = Math.min(Number(slider.max), Math.max(Number(slider.min), parsed));
+        this.onParamChange(model, comp, value);
+        // После подтверждения показываем реально рассчитанное значение, в том числе
+        // после обрезания/масштабирования цвета за пределами охвата RGB.
+        this.restoreNumberInput(model, comp);
+        if (value !== parsed) {
+            this.warningDiv.textContent = `Значение ограничено диапазоном ${slider.min}–${slider.max}. `
+                + this.warningDiv.textContent;
+        }
+    }
+
     runTests() {
         const results = runTests();
         let output = '🔬 Результаты автотестов:\n';
@@ -346,9 +393,12 @@ class ColorApp {
 
         const setParam = (model, comp, val) => {
             const key = model + '.' + comp;
-            if (this.sliders[key]) {
-                this.sliders[key].value = val;
-                this.numberInputs[key].value = val;
+            if (!this.sliders[key]) return;
+            const slider = this.sliders[key];
+            const numberInput = this.numberInputs[key];
+            slider.value = val;
+            if (!this.pendingInputs.has(key)) {
+                numberInput.value = this.formatParamValue(val, slider);
             }
         };
         setParam('xyz', 'X', X);
@@ -366,7 +416,7 @@ class ColorApp {
             this.colorPicker.value = hex;
         }
         this.colorPreview.style.background = Model.rgbToHex(r, g, b);
-        
+
         this.updateGradients();
     }
 
@@ -381,14 +431,14 @@ class ColorApp {
             const y = (comp === 'Y') ? value : this.state.xyz.Y;
             const z = (comp === 'Z') ? value : this.state.xyz.Z;
             const rgbRes = Model.xyzToRgb(x, y, z, data.xyz2rgb, strategy);
-            newRgb = { r: rgbRes.r, g: rgbRes.g, b: rgbRes.b };
+            newRgb = { r: rgbRes.r, g: rgbRes.g, b: rgbRes.b, clipped: rgbRes.clipped };
         } else if (model === 'lab') {
             const L = (comp === 'L') ? value : this.state.lab.L;
             const a = (comp === 'a') ? value : this.state.lab.a;
             const b = (comp === 'b') ? value : this.state.lab.b;
             const xyz2 = Model.labToXyz(L, a, b, data.white);
             const rgbRes = Model.xyzToRgb(xyz2.X, xyz2.Y, xyz2.Z, data.xyz2rgb, strategy);
-            newRgb = { r: rgbRes.r, g: rgbRes.g, b: rgbRes.b };
+            newRgb = { r: rgbRes.r, g: rgbRes.g, b: rgbRes.b, clipped: rgbRes.clipped };
         } else if (model === 'hsl') {
             const h = (comp === 'H') ? value : this.state.hsl.h;
             const s = (comp === 'S') ? value : this.state.hsl.s;
@@ -429,12 +479,12 @@ class ColorApp {
                 const max = parseFloat(this.sliders[key].max);
                 const imageData = ctx.createImageData(w, h);
                 const dataArr = imageData.data;
-                
+
                 for (let px = 0; px < w; px++) {
                     const t = px / (w - 1);
                     const val = min + t * (max - min);
                     let rgb;
-                    
+
                     if (model === 'xyz') {
                         const x = (comp === 'X') ? val : fixed.xyz.X;
                         const y = (comp === 'Y') ? val : fixed.xyz.Y;
@@ -448,18 +498,18 @@ class ColorApp {
                         const xyz2 = Model.labToXyz(L, a, b, data.white);
                         const res = Model.xyzToRgb(xyz2.X, xyz2.Y, xyz2.Z, data.xyz2rgb, strategy);
                         rgb = { r: res.r, g: res.g, b: res.b };
-                    } else { // hsl
+                    } else {
                         const h = (comp === 'H') ? val : fixed.hsl.h;
                         const s = (comp === 'S') ? val : fixed.hsl.s;
                         const l = (comp === 'L') ? val : fixed.hsl.l;
                         const rgb2 = Model.hslToRgb(h, s, l);
                         rgb = { r: rgb2.r, g: rgb2.g, b: rgb2.b };
                     }
-                    
+
                     const rr = Math.min(255, Math.max(0, Math.round(rgb.r)));
                     const gg = Math.min(255, Math.max(0, Math.round(rgb.g)));
                     const bb = Math.min(255, Math.max(0, Math.round(rgb.b)));
-                    
+
                     for (let py = 0; py < h; py++) {
                         const idx = (py * w + px) * 4;
                         dataArr[idx] = rr;
@@ -481,6 +531,7 @@ class ColorApp {
         }
     }
 }
+
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new ColorApp();
 });
