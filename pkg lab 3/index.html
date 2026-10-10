@@ -63,19 +63,37 @@
                     <div class="image-info" id="imageInfo" hidden></div>
 
                     <div class="controls">
-                        <button id="grayscaleButton" class="action-button" disabled>
+                        <button
+                            id="grayscaleButton"
+                            class="action-button"
+                            disabled
+                        >
                             Convert to grayscale
                         </button>
 
-                        <button id="resetButton" class="secondary-button" disabled>
-                            Reset image
+                        <button
+                            id="invertButton"
+                            class="action-button"
+                            disabled
+                        >
+                            Invert colors
+                        </button>
+
+                        <button
+                            id="resetButton"
+                            class="secondary-button"
+                            disabled
+                        >
+                            Reset result
                         </button>
                     </div>
 
                     <div class="result-area">
                         <h3>Processed image</h3>
                         <div class="image-preview result-preview">
-                            <span id="resultPlaceholder">Result will appear here</span>
+                            <span id="resultPlaceholder">
+                                Result will appear here
+                            </span>
                             <canvas id="resultCanvas" hidden></canvas>
                         </div>
                     </div>

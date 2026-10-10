@@ -7,7 +7,9 @@ const imageInfo = document.getElementById("imageInfo");
 const appStatus = document.getElementById("appStatus");
 
 const grayscaleButton = document.getElementById("grayscaleButton");
+const invertButton = document.getElementById("invertButton");
 const resetButton = document.getElementById("resetButton");
+
 const resultCanvas = document.getElementById("resultCanvas");
 const resultPlaceholder = document.getElementById("resultPlaceholder");
 
@@ -61,6 +63,7 @@ function resetPreview() {
     imageInfo.textContent = "";
 
     grayscaleButton.disabled = true;
+    invertButton.disabled = true;
     resetButton.disabled = true;
 
     clearResult();
@@ -95,7 +98,9 @@ function showImage(file) {
             `${previewImage.naturalHeight} px · ${formatFileSize(file.size)}`;
 
         imageInfo.hidden = false;
+
         grayscaleButton.disabled = false;
+        invertButton.disabled = false;
         resetButton.disabled = false;
 
         setStatus("Image loaded");
@@ -109,10 +114,10 @@ function showImage(file) {
     previewImage.src = currentImageUrl;
 }
 
-function convertToGrayscale() {
+function prepareCanvas() {
     if (!previewImage.complete || previewImage.naturalWidth === 0) {
         setStatus("Please load an image first", true);
-        return;
+        return null;
     }
 
     const width = previewImage.naturalWidth;
@@ -127,7 +132,26 @@ function convertToGrayscale() {
 
     context.drawImage(previewImage, 0, 0, width, height);
 
-    const imageData = context.getImageData(0, 0, width, height);
+    return {
+        context,
+        imageData: context.getImageData(0, 0, width, height)
+    };
+}
+
+function showResult(message) {
+    resultCanvas.hidden = false;
+    resultPlaceholder.hidden = true;
+    setStatus(message);
+}
+
+function convertToGrayscale() {
+    const prepared = prepareCanvas();
+
+    if (!prepared) {
+        return;
+    }
+
+    const { context, imageData } = prepared;
     const pixels = imageData.data;
 
     for (let i = 0; i < pixels.length; i += 4) {
@@ -135,7 +159,6 @@ function convertToGrayscale() {
         const green = pixels[i + 1];
         const blue = pixels[i + 2];
 
-        // Weighted luminance approximation.
         const gray = Math.round(
             0.299 * red +
             0.587 * green +
@@ -148,11 +171,29 @@ function convertToGrayscale() {
     }
 
     context.putImageData(imageData, 0, 0);
+    showResult("Grayscale conversion complete");
+}
 
-    resultCanvas.hidden = false;
-    resultPlaceholder.hidden = true;
+function invertColors() {
+    const prepared = prepareCanvas();
 
-    setStatus("Grayscale conversion complete");
+    if (!prepared) {
+        return;
+    }
+
+    const { context, imageData } = prepared;
+    const pixels = imageData.data;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+        pixels[i] = 255 - pixels[i];
+        pixels[i + 1] = 255 - pixels[i + 1];
+        pixels[i + 2] = 255 - pixels[i + 2];
+
+        // Alpha channel remains unchanged.
+    }
+
+    context.putImageData(imageData, 0, 0);
+    showResult("Color inversion complete");
 }
 
 function resetImage() {
@@ -169,6 +210,7 @@ imageInput.addEventListener("change", (event) => {
 });
 
 grayscaleButton.addEventListener("click", convertToGrayscale);
+invertButton.addEventListener("click", invertColors);
 resetButton.addEventListener("click", resetImage);
 
 window.addEventListener("beforeunload", () => {
