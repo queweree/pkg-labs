@@ -10,6 +10,10 @@ const grayscaleButton = document.getElementById("grayscaleButton");
 const invertButton = document.getElementById("invertButton");
 const resetButton = document.getElementById("resetButton");
 
+const brightnessSlider = document.getElementById("brightnessSlider");
+const brightnessValue = document.getElementById("brightnessValue");
+const applyBrightnessButton = document.getElementById("applyBrightnessButton");
+
 const resultCanvas = document.getElementById("resultCanvas");
 const resultPlaceholder = document.getElementById("resultPlaceholder");
 
@@ -65,6 +69,12 @@ function resetPreview() {
     grayscaleButton.disabled = true;
     invertButton.disabled = true;
     resetButton.disabled = true;
+    brightnessSlider.disabled = true;
+    applyBrightnessButton.disabled = true;
+
+    brightnessSlider.value = "0";
+    brightnessValue.value = "0";
+    brightnessValue.textContent = "0";
 
     clearResult();
 
@@ -102,6 +112,8 @@ function showImage(file) {
         grayscaleButton.disabled = false;
         invertButton.disabled = false;
         resetButton.disabled = false;
+        brightnessSlider.disabled = false;
+        applyBrightnessButton.disabled = false;
 
         setStatus("Image loaded");
     };
@@ -188,16 +200,46 @@ function invertColors() {
         pixels[i] = 255 - pixels[i];
         pixels[i + 1] = 255 - pixels[i + 1];
         pixels[i + 2] = 255 - pixels[i + 2];
-
-        // Alpha channel remains unchanged.
     }
 
     context.putImageData(imageData, 0, 0);
     showResult("Color inversion complete");
 }
 
+function adjustBrightness() {
+    const prepared = prepareCanvas();
+
+    if (!prepared) {
+        return;
+    }
+
+    const { context, imageData } = prepared;
+    const pixels = imageData.data;
+    const brightness = Number(brightnessSlider.value);
+
+    for (let i = 0; i < pixels.length; i += 4) {
+        pixels[i] = clamp(pixels[i] + brightness);
+        pixels[i + 1] = clamp(pixels[i + 1] + brightness);
+        pixels[i + 2] = clamp(pixels[i + 2] + brightness);
+
+        // Keep the original alpha channel unchanged.
+    }
+
+    context.putImageData(imageData, 0, 0);
+
+    showResult(`Brightness adjusted: ${brightness}`);
+}
+
+function clamp(value) {
+    return Math.max(0, Math.min(255, Math.round(value)));
+}
+
 function resetImage() {
     clearResult();
+    brightnessSlider.value = "0";
+    brightnessValue.value = "0";
+    brightnessValue.textContent = "0";
+
     setStatus("Image loaded");
 }
 
@@ -209,9 +251,17 @@ imageInput.addEventListener("change", (event) => {
     }
 });
 
+brightnessSlider.addEventListener("input", () => {
+    const value = Number(brightnessSlider.value);
+
+    brightnessValue.value = String(value);
+    brightnessValue.textContent = value > 0 ? `+${value}` : String(value);
+});
+
 grayscaleButton.addEventListener("click", convertToGrayscale);
 invertButton.addEventListener("click", invertColors);
 resetButton.addEventListener("click", resetImage);
+applyBrightnessButton.addEventListener("click", adjustBrightness);
 
 window.addEventListener("beforeunload", () => {
     if (currentImageUrl) {

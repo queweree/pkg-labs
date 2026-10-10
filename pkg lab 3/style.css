@@ -261,6 +261,61 @@ h1 {
     margin-top: 8px;
 }
 
+.adjustment-control {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(8, 13, 26, 0.35);
+    text-align: left;
+}
+
+.adjustment-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.adjustment-heading output {
+    min-width: 42px;
+    padding: 3px 8px;
+    border-radius: 7px;
+    background: var(--panel-light);
+    color: var(--accent-light);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+#brightnessSlider {
+    width: 100%;
+    margin: 4px 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+#brightnessSlider:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.range-labels {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.adjustment-control .action-button {
+    align-self: flex-start;
+}
+
 .result-area {
     width: 100%;
     margin-top: 18px;
@@ -327,7 +382,8 @@ h1 {
         flex-direction: column;
     }
 
-    .controls button {
+    .controls button,
+    .adjustment-control .action-button {
         width: 100%;
     }
 }

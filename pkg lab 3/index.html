@@ -88,6 +88,39 @@
                         </button>
                     </div>
 
+                    <div class="adjustment-control">
+                        <div class="adjustment-heading">
+                            <label for="brightnessSlider">Brightness</label>
+                            <output id="brightnessValue" for="brightnessSlider">
+                                0
+                            </output>
+                        </div>
+
+                        <input
+                            type="range"
+                            id="brightnessSlider"
+                            min="-100"
+                            max="100"
+                            value="0"
+                            step="1"
+                            disabled
+                        >
+
+                        <div class="range-labels">
+                            <span>-100</span>
+                            <span>0</span>
+                            <span>+100</span>
+                        </div>
+
+                        <button
+                            id="applyBrightnessButton"
+                            class="action-button"
+                            disabled
+                        >
+                            Apply brightness
+                        </button>
+                    </div>
+
                     <div class="result-area">
                         <h3>Processed image</h3>
                         <div class="image-preview result-preview">
