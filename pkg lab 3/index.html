@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Обработка изображений</title>
+    <title>Image Processing</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -38,10 +38,7 @@
                 <div class="placeholder upload-area">
                     <div class="placeholder-icon">▧</div>
                     <h3>Загрузить изображение</h3>
-                    <p>
-                        Выберите изображение с компьютера,
-                        чтобы увидеть его в рабочей области.
-                    </p>
+                    <p>Выберите изображение с компьютера.</p>
 
                     <label class="upload-button" for="imageInput">
                         Choose image
@@ -56,10 +53,32 @@
 
                     <div class="image-preview" id="imagePreview">
                         <span class="preview-empty">No image selected</span>
-                        <img id="previewImage" alt="Предпросмотр изображения" hidden>
+                        <img
+                            id="previewImage"
+                            alt="Original image preview"
+                            hidden
+                        >
                     </div>
 
                     <div class="image-info" id="imageInfo" hidden></div>
+
+                    <div class="controls">
+                        <button id="grayscaleButton" class="action-button" disabled>
+                            Convert to grayscale
+                        </button>
+
+                        <button id="resetButton" class="secondary-button" disabled>
+                            Reset image
+                        </button>
+                    </div>
+
+                    <div class="result-area">
+                        <h3>Processed image</h3>
+                        <div class="image-preview result-preview">
+                            <span id="resultPlaceholder">Result will appear here</span>
+                            <canvas id="resultCanvas" hidden></canvas>
+                        </div>
+                    </div>
                 </div>
             </article>
 
