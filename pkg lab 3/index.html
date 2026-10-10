@@ -11,13 +11,13 @@
         <div class="topbar-spacer"></div>
         <div class="topbar-status">
             <span class="status-dot"></span>
-            <span>Готов к работе</span>
+            <span id="appStatus">Ready</span>
         </div>
     </header>
 
     <main class="container">
         <section class="welcome">
-            <p class="eyebrow">Цифровая обработка изображений</p>
+            <p class="eyebrow">Digital Image Processing</p>
             <h1>Рабочая область</h1>
             <p class="description">
                 Загрузка изображений, преобразование пикселей
@@ -35,10 +35,31 @@
                     </div>
                 </div>
 
-                <div class="placeholder">
+                <div class="placeholder upload-area">
                     <div class="placeholder-icon">▧</div>
-                    <h3>Рабочая область изображения</h3>
-                    <p>На следующих этапах здесь появятся загрузка изображения и инструменты обработки.</p>
+                    <h3>Загрузить изображение</h3>
+                    <p>
+                        Выберите изображение с компьютера,
+                        чтобы увидеть его в рабочей области.
+                    </p>
+
+                    <label class="upload-button" for="imageInput">
+                        Choose image
+                    </label>
+
+                    <input
+                        type="file"
+                        id="imageInput"
+                        accept="image/*"
+                        hidden
+                    >
+
+                    <div class="image-preview" id="imagePreview">
+                        <span class="preview-empty">No image selected</span>
+                        <img id="previewImage" alt="Предпросмотр изображения" hidden>
+                    </div>
+
+                    <div class="image-info" id="imageInfo" hidden></div>
                 </div>
             </article>
 
@@ -51,26 +72,14 @@
                     </div>
                 </div>
 
-                <div class="placeholder upload-area">
-    <div class="placeholder-icon">▧</div>
-    <h3>Загрузить изображение</h3>
-    <p>Выберите изображение с компьютера для начала работы.</p>
-
-    <label class="upload-button" for="imageInput">
-        Choose image
-    </label>
-
-    <input
-        type="file"
-        id="imageInput"
-        accept="image/*"
-        hidden
-    >
-
-    <div class="image-preview" id="imagePreview">
-        <span>No image selected</span>
-    </div>
-</div>
+                <div class="placeholder">
+                    <div class="placeholder-icon">◩</div>
+                    <h3>Область бинаризации</h3>
+                    <p>
+                        Здесь будут доступны методы локальной
+                        и адаптивной пороговой обработки.
+                    </p>
+                </div>
             </article>
         </section>
 
@@ -79,5 +88,7 @@
             <span>Веб-приложение</span>
         </footer>
     </main>
+
+    <script src="app.js"></script>
 </body>
 </html>
