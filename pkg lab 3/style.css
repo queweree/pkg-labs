@@ -217,3 +217,51 @@ h1 {
         gap: 4px;
     }
 }
+.upload-area {
+    gap: 12px;
+}
+
+.upload-area > p {
+    margin-top: 0;
+}
+
+.upload-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 11px 20px;
+    border: 1px solid rgba(139, 156, 255, 0.45);
+    border-radius: 10px;
+    background: rgba(139, 156, 255, 0.14);
+    color: var(--accent-light);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.upload-button:hover {
+    background: rgba(139, 156, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+.image-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 90px;
+    margin-top: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.image-preview img {
+    display: block;
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+}

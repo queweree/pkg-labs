@@ -51,11 +51,26 @@
                     </div>
                 </div>
 
-                <div class="placeholder">
-                    <div class="placeholder-icon">◩</div>
-                    <h3>Область бинаризации</h3>
-                    <p>На следующих этапах здесь появятся методы локальной и адаптивной пороговой обработки.</p>
-                </div>
+                <div class="placeholder upload-area">
+    <div class="placeholder-icon">▧</div>
+    <h3>Загрузить изображение</h3>
+    <p>Выберите изображение с компьютера для начала работы.</p>
+
+    <label class="upload-button" for="imageInput">
+        Choose image
+    </label>
+
+    <input
+        type="file"
+        id="imageInput"
+        accept="image/*"
+        hidden
+    >
+
+    <div class="image-preview" id="imagePreview">
+        <span>No image selected</span>
+    </div>
+</div>
             </article>
         </section>
 
