@@ -33,10 +33,13 @@ const sauvolaButton = document.getElementById("sauvolaButton");
 
 const resultCanvas = document.getElementById("resultCanvas");
 const resultPlaceholder = document.getElementById("resultPlaceholder");
+const resultStatus = document.getElementById("resultStatus");
+const downloadButton = document.getElementById("downloadButton");
 const resultContext = resultCanvas.getContext("2d");
 
 let originalImage = null;
 let currentImageUrl = null;
+let hasProcessedResult = false;
 
 function setProcessingControlsEnabled(enabled) {
     [
@@ -55,6 +58,8 @@ function clearResult() {
     resultContext.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
     resultCanvas.hidden = true;
     resultPlaceholder.hidden = false;
+    downloadButton.disabled = true;
+    hasProcessedResult = false;
 }
 
 function getOriginalImageData() {
@@ -68,16 +73,23 @@ function getOriginalImageData() {
     return context.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-function displayImageData(imageData) {
+function displayImageData(imageData, operationName = "Processing complete") {
     resultCanvas.width = imageData.width;
     resultCanvas.height = imageData.height;
     resultContext.putImageData(imageData, 0, 0);
+
     resultCanvas.hidden = false;
     resultPlaceholder.hidden = true;
+    downloadButton.disabled = false;
+    hasProcessedResult = true;
+
+    resultStatus.textContent =
+        `${operationName}. Output size: ${imageData.width} × ${imageData.height} px.`;
 }
 
 function showImageInfo(file, image) {
     const sizeInKB = (file.size / 1024).toFixed(1);
+
     imageInfo.textContent =
         `${file.name} · ${image.naturalWidth} × ${image.naturalHeight} px · ${sizeInKB} KB`;
 }
@@ -204,13 +216,16 @@ imageInput.addEventListener("change", () => {
         originalImage = loadedImage;
         previewImage.src = currentImageUrl;
         previewImage.hidden = false;
+
         showImageInfo(file, loadedImage);
         setProcessingControlsEnabled(true);
         clearResult();
+        resultStatus.textContent = "Image loaded. Choose an operation.";
 
         brightnessSlider.value = "0";
         brightnessValue.value = "0";
         brightnessValue.textContent = "0";
+
         contrastSlider.value = "0";
         contrastValue.value = "0";
         contrastValue.textContent = "0";
@@ -218,6 +233,7 @@ imageInput.addEventListener("change", () => {
 
     loadedImage.onerror = () => {
         imageInfo.textContent = "The selected image could not be loaded.";
+        resultStatus.textContent = "Image loading failed.";
         setProcessingControlsEnabled(false);
     };
 
@@ -226,6 +242,7 @@ imageInput.addEventListener("change", () => {
 
 grayscaleButton.addEventListener("click", () => {
     if (!originalImage) return;
+
     const imageData = getOriginalImageData();
     const gray = getGrayscalePixels(imageData);
 
@@ -235,11 +252,12 @@ grayscaleButton.addEventListener("click", () => {
         imageData.data[i + 2] = gray[p];
     }
 
-    displayImageData(imageData);
+    displayImageData(imageData, "Grayscale conversion complete");
 });
 
 invertButton.addEventListener("click", () => {
     if (!originalImage) return;
+
     const imageData = getOriginalImageData();
 
     for (let i = 0; i < imageData.data.length; i += 4) {
@@ -248,7 +266,7 @@ invertButton.addEventListener("click", () => {
         imageData.data[i + 2] = 255 - imageData.data[i + 2];
     }
 
-    displayImageData(imageData);
+    displayImageData(imageData, "Color inversion complete");
 });
 
 brightnessSlider.addEventListener("input", () => {
@@ -258,6 +276,7 @@ brightnessSlider.addEventListener("input", () => {
 
 applyBrightnessButton.addEventListener("click", () => {
     if (!originalImage) return;
+
     const imageData = getOriginalImageData();
     const brightness = Number(brightnessSlider.value);
 
@@ -267,7 +286,7 @@ applyBrightnessButton.addEventListener("click", () => {
         imageData.data[i + 2] = clamp(imageData.data[i + 2] + brightness);
     }
 
-    displayImageData(imageData);
+    displayImageData(imageData, "Brightness adjustment complete");
 });
 
 contrastSlider.addEventListener("input", () => {
@@ -277,6 +296,7 @@ contrastSlider.addEventListener("input", () => {
 
 applyContrastButton.addEventListener("click", () => {
     if (!originalImage) return;
+
     const imageData = getOriginalImageData();
     const contrast = Number(contrastSlider.value);
     const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
@@ -287,11 +307,12 @@ applyContrastButton.addEventListener("click", () => {
         imageData.data[i + 2] = clamp(factor * (imageData.data[i + 2] - 128) + 128);
     }
 
-    displayImageData(imageData);
+    displayImageData(imageData, "Contrast adjustment complete");
 });
 
 stretchButton.addEventListener("click", () => {
     if (!originalImage) return;
+
     const imageData = getOriginalImageData();
     const gray = getGrayscalePixels(imageData);
 
@@ -304,7 +325,7 @@ stretchButton.addEventListener("click", () => {
     }
 
     if (maxValue === minValue) {
-        displayImageData(imageData);
+        displayImageData(imageData, "Contrast stretching skipped: intensity range is zero");
         return;
     }
 
@@ -316,7 +337,7 @@ stretchButton.addEventListener("click", () => {
         imageData.data[i + 2] = clamp((imageData.data[i + 2] - minValue) * 255 / range);
     }
 
-    displayImageData(imageData);
+    displayImageData(imageData, "Linear contrast stretching complete");
 });
 
 localMeanWindow.addEventListener("input", () => {
@@ -344,7 +365,7 @@ localMeanButton.addEventListener("click", () => {
         return getWindowStatistics(stats, x, y).mean - offset;
     });
 
-    displayImageData(output);
+    displayImageData(output, "Local mean thresholding complete");
 });
 
 niblackK.addEventListener("input", () => {
@@ -369,7 +390,7 @@ niblackButton.addEventListener("click", () => {
         return local.mean + k * local.standardDeviation;
     });
 
-    displayImageData(output);
+    displayImageData(output, "Niblack thresholding complete");
 });
 
 sauvolaK.addEventListener("input", () => {
@@ -399,7 +420,7 @@ sauvolaButton.addEventListener("click", () => {
         );
     });
 
-    displayImageData(output);
+    displayImageData(output, "Sauvola adaptive thresholding complete");
 });
 
 resetButton.addEventListener("click", () => {
@@ -412,6 +433,31 @@ resetButton.addEventListener("click", () => {
     contrastSlider.value = "0";
     contrastValue.value = "0";
     contrastValue.textContent = "0";
+
+    resultStatus.textContent = "Result cleared. Choose another operation.";
+});
+
+downloadButton.addEventListener("click", () => {
+    if (!hasProcessedResult || resultCanvas.hidden) return;
+
+    resultCanvas.toBlob(blob => {
+        if (!blob) {
+            resultStatus.textContent = "Could not export the image.";
+            return;
+        }
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = downloadUrl;
+        link.download = "processed-image.png";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        URL.revokeObjectURL(downloadUrl);
+        resultStatus.textContent = "PNG export requested.";
+    }, "image/png");
 });
 
 window.addEventListener("beforeunload", () => {

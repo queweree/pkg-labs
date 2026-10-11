@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Processing Lab</title>
+    <title>Image Processing Lab — Variant 11</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -68,14 +68,18 @@
                     <h3>Processed Image</h3>
                     <canvas id="resultCanvas" hidden></canvas>
                     <p id="resultPlaceholder">Processed image will appear here</p>
+                    <p class="control-description" id="resultStatus" role="status">
+                        Upload an image to begin.
+                    </p>
+                    <button id="downloadButton" disabled>Download Result as PNG</button>
                 </div>
             </div>
 
             <div class="panel">
                 <h2>Thresholding</h2>
                 <p class="placeholder-text">
-                    Local mean, Niblack, and Sauvola methods use local image
-                    statistics. Integral images accelerate the neighborhood calculations.
+                    Compare local mean thresholding, Niblack thresholding,
+                    and Sauvola adaptive thresholding.
                 </p>
 
                 <div class="adjustment-control">
