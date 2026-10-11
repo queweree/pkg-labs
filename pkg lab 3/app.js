@@ -1,10 +1,6 @@
-"use strict";
-
 const imageInput = document.getElementById("imageInput");
 const previewImage = document.getElementById("previewImage");
-const imagePreview = document.getElementById("imagePreview");
 const imageInfo = document.getElementById("imageInfo");
-const appStatus = document.getElementById("appStatus");
 
 const grayscaleButton = document.getElementById("grayscaleButton");
 const invertButton = document.getElementById("invertButton");
@@ -14,167 +10,139 @@ const brightnessSlider = document.getElementById("brightnessSlider");
 const brightnessValue = document.getElementById("brightnessValue");
 const applyBrightnessButton = document.getElementById("applyBrightnessButton");
 
+const contrastSlider = document.getElementById("contrastSlider");
+const contrastValue = document.getElementById("contrastValue");
+const applyContrastButton = document.getElementById("applyContrastButton");
+
 const resultCanvas = document.getElementById("resultCanvas");
 const resultPlaceholder = document.getElementById("resultPlaceholder");
 
+const resultContext = resultCanvas.getContext("2d");
+
+let originalImage = null;
 let currentImageUrl = null;
 
-function setStatus(message, isError = false) {
-    appStatus.textContent = message;
+function setProcessingControlsEnabled(enabled) {
+    grayscaleButton.disabled = !enabled;
+    invertButton.disabled = !enabled;
+    resetButton.disabled = !enabled;
 
-    const dot = document.querySelector(".status-dot");
+    brightnessSlider.disabled = !enabled;
+    applyBrightnessButton.disabled = !enabled;
 
-    if (dot) {
-        dot.style.background = isError ? "#ff8585" : "#63d6a3";
-        dot.style.boxShadow = isError
-            ? "0 0 12px rgba(255, 133, 133, 0.4)"
-            : "0 0 12px rgba(99, 214, 163, 0.4)";
-    }
-}
-
-function formatFileSize(bytes) {
-    if (bytes < 1024) {
-        return `${bytes} B`;
-    }
-
-    if (bytes < 1024 * 1024) {
-        return `${(bytes / 1024).toFixed(1)} KB`;
-    }
-
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    contrastSlider.disabled = !enabled;
+    applyContrastButton.disabled = !enabled;
 }
 
 function clearResult() {
-    const context = resultCanvas.getContext("2d");
-
-    context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-
-    resultCanvas.width = 0;
-    resultCanvas.height = 0;
+    resultContext.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
     resultCanvas.hidden = true;
     resultPlaceholder.hidden = false;
 }
 
-function resetPreview() {
-    previewImage.onload = null;
-    previewImage.onerror = null;
-    previewImage.removeAttribute("src");
-    previewImage.hidden = true;
-
-    imagePreview.querySelector(".preview-empty").hidden = false;
-
-    imageInfo.hidden = true;
-    imageInfo.textContent = "";
-
-    grayscaleButton.disabled = true;
-    invertButton.disabled = true;
-    resetButton.disabled = true;
-    brightnessSlider.disabled = true;
-    applyBrightnessButton.disabled = true;
-
-    brightnessSlider.value = "0";
-    brightnessValue.value = "0";
-    brightnessValue.textContent = "0";
-
-    clearResult();
-
-    if (currentImageUrl) {
-        URL.revokeObjectURL(currentImageUrl);
-        currentImageUrl = null;
+function drawOriginalToCanvas() {
+    if (!originalImage) {
+        return;
     }
+
+    resultCanvas.width = originalImage.naturalWidth;
+    resultCanvas.height = originalImage.naturalHeight;
+
+    resultContext.drawImage(
+        originalImage,
+        0,
+        0,
+        resultCanvas.width,
+        resultCanvas.height
+    );
+
+    resultCanvas.hidden = false;
+    resultPlaceholder.hidden = true;
 }
 
-function showImage(file) {
+function getOriginalImageData() {
+    const temporaryCanvas = document.createElement("canvas");
+    temporaryCanvas.width = originalImage.naturalWidth;
+    temporaryCanvas.height = originalImage.naturalHeight;
+
+    const temporaryContext = temporaryCanvas.getContext("2d");
+    temporaryContext.drawImage(originalImage, 0, 0);
+
+    return temporaryContext.getImageData(
+        0,
+        0,
+        temporaryCanvas.width,
+        temporaryCanvas.height
+    );
+}
+
+function showImageInfo(file, image) {
+    const sizeInKB = (file.size / 1024).toFixed(1);
+
+    imageInfo.textContent =
+        `${file.name} · ${image.naturalWidth} × ${image.naturalHeight} px · ${sizeInKB} KB`;
+}
+
+imageInput.addEventListener("change", () => {
+    const file = imageInput.files[0];
+
     if (!file) {
         return;
     }
 
     if (!file.type.startsWith("image/")) {
-        setStatus("Unsupported file", true);
+        imageInfo.textContent = "Please select a valid image file.";
         imageInput.value = "";
         return;
     }
 
-    resetPreview();
+    if (currentImageUrl) {
+        URL.revokeObjectURL(currentImageUrl);
+    }
 
     currentImageUrl = URL.createObjectURL(file);
 
-    previewImage.onload = () => {
-        imagePreview.querySelector(".preview-empty").hidden = true;
+    const loadedImage = new Image();
+
+    loadedImage.onload = () => {
+        originalImage = loadedImage;
+        previewImage.src = currentImageUrl;
         previewImage.hidden = false;
 
-        imageInfo.textContent =
-            `${file.name} · ${previewImage.naturalWidth} × ` +
-            `${previewImage.naturalHeight} px · ${formatFileSize(file.size)}`;
+        showImageInfo(file, loadedImage);
+        setProcessingControlsEnabled(true);
+        clearResult();
 
-        imageInfo.hidden = false;
+        brightnessSlider.value = "0";
+        brightnessValue.value = "0";
+        brightnessValue.textContent = "0";
 
-        grayscaleButton.disabled = false;
-        invertButton.disabled = false;
-        resetButton.disabled = false;
-        brightnessSlider.disabled = false;
-        applyBrightnessButton.disabled = false;
-
-        setStatus("Image loaded");
+        contrastSlider.value = "0";
+        contrastValue.value = "0";
+        contrastValue.textContent = "0";
     };
 
-    previewImage.onerror = () => {
-        resetPreview();
-        setStatus("Could not load image", true);
+    loadedImage.onerror = () => {
+        imageInfo.textContent = "The selected image could not be loaded.";
+        setProcessingControlsEnabled(false);
     };
 
-    previewImage.src = currentImageUrl;
-}
+    loadedImage.src = currentImageUrl;
+});
 
-function prepareCanvas() {
-    if (!previewImage.complete || previewImage.naturalWidth === 0) {
-        setStatus("Please load an image first", true);
-        return null;
-    }
-
-    const width = previewImage.naturalWidth;
-    const height = previewImage.naturalHeight;
-
-    resultCanvas.width = width;
-    resultCanvas.height = height;
-
-    const context = resultCanvas.getContext("2d", {
-        willReadFrequently: true
-    });
-
-    context.drawImage(previewImage, 0, 0, width, height);
-
-    return {
-        context,
-        imageData: context.getImageData(0, 0, width, height)
-    };
-}
-
-function showResult(message) {
-    resultCanvas.hidden = false;
-    resultPlaceholder.hidden = true;
-    setStatus(message);
-}
-
-function convertToGrayscale() {
-    const prepared = prepareCanvas();
-
-    if (!prepared) {
+grayscaleButton.addEventListener("click", () => {
+    if (!originalImage) {
         return;
     }
 
-    const { context, imageData } = prepared;
+    const imageData = getOriginalImageData();
     const pixels = imageData.data;
 
     for (let i = 0; i < pixels.length; i += 4) {
-        const red = pixels[i];
-        const green = pixels[i + 1];
-        const blue = pixels[i + 2];
-
         const gray = Math.round(
-            0.299 * red +
-            0.587 * green +
-            0.114 * blue
+            0.299 * pixels[i] +
+            0.587 * pixels[i + 1] +
+            0.114 * pixels[i + 2]
         );
 
         pixels[i] = gray;
@@ -182,18 +150,20 @@ function convertToGrayscale() {
         pixels[i + 2] = gray;
     }
 
-    context.putImageData(imageData, 0, 0);
-    showResult("Grayscale conversion complete");
-}
+    resultCanvas.width = imageData.width;
+    resultCanvas.height = imageData.height;
+    resultContext.putImageData(imageData, 0, 0);
 
-function invertColors() {
-    const prepared = prepareCanvas();
+    resultCanvas.hidden = false;
+    resultPlaceholder.hidden = true;
+});
 
-    if (!prepared) {
+invertButton.addEventListener("click", () => {
+    if (!originalImage) {
         return;
     }
 
-    const { context, imageData } = prepared;
+    const imageData = getOriginalImageData();
     const pixels = imageData.data;
 
     for (let i = 0; i < pixels.length; i += 4) {
@@ -202,66 +172,89 @@ function invertColors() {
         pixels[i + 2] = 255 - pixels[i + 2];
     }
 
-    context.putImageData(imageData, 0, 0);
-    showResult("Color inversion complete");
-}
+    resultCanvas.width = imageData.width;
+    resultCanvas.height = imageData.height;
+    resultContext.putImageData(imageData, 0, 0);
 
-function adjustBrightness() {
-    const prepared = prepareCanvas();
+    resultCanvas.hidden = false;
+    resultPlaceholder.hidden = true;
+});
 
-    if (!prepared) {
+brightnessSlider.addEventListener("input", () => {
+    brightnessValue.value = brightnessSlider.value;
+    brightnessValue.textContent = brightnessSlider.value;
+});
+
+applyBrightnessButton.addEventListener("click", () => {
+    if (!originalImage) {
         return;
     }
 
-    const { context, imageData } = prepared;
-    const pixels = imageData.data;
     const brightness = Number(brightnessSlider.value);
+    const imageData = getOriginalImageData();
+    const pixels = imageData.data;
 
     for (let i = 0; i < pixels.length; i += 4) {
         pixels[i] = clamp(pixels[i] + brightness);
         pixels[i + 1] = clamp(pixels[i + 1] + brightness);
         pixels[i + 2] = clamp(pixels[i + 2] + brightness);
-
-        // Keep the original alpha channel unchanged.
     }
 
-    context.putImageData(imageData, 0, 0);
+    resultCanvas.width = imageData.width;
+    resultCanvas.height = imageData.height;
+    resultContext.putImageData(imageData, 0, 0);
 
-    showResult(`Brightness adjusted: ${brightness}`);
-}
+    resultCanvas.hidden = false;
+    resultPlaceholder.hidden = true;
+});
 
-function clamp(value) {
-    return Math.max(0, Math.min(255, Math.round(value)));
-}
+contrastSlider.addEventListener("input", () => {
+    contrastValue.value = contrastSlider.value;
+    contrastValue.textContent = contrastSlider.value;
+});
 
-function resetImage() {
+applyContrastButton.addEventListener("click", () => {
+    if (!originalImage) {
+        return;
+    }
+
+    const contrast = Number(contrastSlider.value);
+
+    // Map the slider value to a contrast factor.
+    const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+
+    const imageData = getOriginalImageData();
+    const pixels = imageData.data;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+        pixels[i] = clamp(factor * (pixels[i] - 128) + 128);
+        pixels[i + 1] = clamp(factor * (pixels[i + 1] - 128) + 128);
+        pixels[i + 2] = clamp(factor * (pixels[i + 2] - 128) + 128);
+    }
+
+    resultCanvas.width = imageData.width;
+    resultCanvas.height = imageData.height;
+    resultContext.putImageData(imageData, 0, 0);
+
+    resultCanvas.hidden = false;
+    resultPlaceholder.hidden = true;
+});
+
+resetButton.addEventListener("click", () => {
     clearResult();
+
     brightnessSlider.value = "0";
     brightnessValue.value = "0";
     brightnessValue.textContent = "0";
 
-    setStatus("Image loaded");
+    contrastSlider.value = "0";
+    contrastValue.value = "0";
+    contrastValue.textContent = "0";
+});
+
+function clamp(value) {
+    return Math.max(0, Math.min(255, Math.round(value)));
 }
-
-imageInput.addEventListener("change", (event) => {
-    const file = event.target.files[0];
-
-    if (file) {
-        showImage(file);
-    }
-});
-
-brightnessSlider.addEventListener("input", () => {
-    const value = Number(brightnessSlider.value);
-
-    brightnessValue.value = String(value);
-    brightnessValue.textContent = value > 0 ? `+${value}` : String(value);
-});
-
-grayscaleButton.addEventListener("click", convertToGrayscale);
-invertButton.addEventListener("click", invertColors);
-resetButton.addEventListener("click", resetImage);
-applyBrightnessButton.addEventListener("click", adjustBrightness);
 
 window.addEventListener("beforeunload", () => {
     if (currentImageUrl) {

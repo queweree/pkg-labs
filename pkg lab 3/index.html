@@ -1,161 +1,114 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Processing</title>
+    <title>Image Processing Lab</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="topbar">
-        <div class="topbar-spacer"></div>
-        <div class="topbar-status">
-            <span class="status-dot"></span>
-            <span id="appStatus">Ready</span>
-        </div>
-    </header>
-
-    <main class="container">
-        <section class="welcome">
-            <p class="eyebrow">Digital Image Processing</p>
-            <h1>Рабочая область</h1>
-            <p class="description">
-                Загрузка изображений, преобразование пикселей
-                и методы пороговой обработки.
-            </p>
-        </section>
+    <main class="app">
+        <header class="app-header">
+            <h1>Image Processing Lab</h1>
+            <p>Laboratory Work 3 — Image Processing Operations</p>
+        </header>
 
         <section class="workspace">
-            <article class="panel">
-                <div class="panel-heading">
-                    <span class="panel-number">01</span>
-                    <div>
-                        <h2>Пиксельные операции</h2>
-                        <p>Преобразование яркости и контраста</p>
-                    </div>
+            <div class="panel">
+                <h2>Pixelwise Operations</h2>
+
+                <div class="upload-control">
+                    <label for="imageInput">Select an image</label>
+                    <input type="file" id="imageInput" accept="image/*">
                 </div>
 
-                <div class="placeholder upload-area">
-                    <div class="placeholder-icon">▧</div>
-                    <h3>Загрузить изображение</h3>
-                    <p>Выберите изображение с компьютера.</p>
+                <div class="image-info" id="imageInfo">
+                    No image selected
+                </div>
 
-                    <label class="upload-button" for="imageInput">
-                        Choose image
-                    </label>
+                <div class="preview-container">
+                    <h3>Original Image</h3>
+                    <img id="previewImage" alt="Original image preview" hidden>
+                </div>
 
+                <div class="controls">
+                    <button id="grayscaleButton" disabled>
+                        Convert to Grayscale
+                    </button>
+                    <button id="invertButton" disabled>
+                        Invert Colors
+                    </button>
+                    <button id="resetButton" disabled>
+                        Reset Result
+                    </button>
+                </div>
+
+                <div class="adjustment-control">
+                    <div class="adjustment-heading">
+                        <label for="brightnessSlider">Brightness</label>
+                        <output id="brightnessValue">0</output>
+                    </div>
                     <input
-                        type="file"
-                        id="imageInput"
-                        accept="image/*"
-                        hidden
+                        type="range"
+                        id="brightnessSlider"
+                        min="-100"
+                        max="100"
+                        value="0"
+                        step="1"
+                        disabled
                     >
-
-                    <div class="image-preview" id="imagePreview">
-                        <span class="preview-empty">No image selected</span>
-                        <img
-                            id="previewImage"
-                            alt="Original image preview"
-                            hidden
-                        >
+                    <div class="range-labels">
+                        <span>-100</span>
+                        <span>0</span>
+                        <span>+100</span>
                     </div>
-
-                    <div class="image-info" id="imageInfo" hidden></div>
-
-                    <div class="controls">
-                        <button
-                            id="grayscaleButton"
-                            class="action-button"
-                            disabled
-                        >
-                            Convert to grayscale
-                        </button>
-
-                        <button
-                            id="invertButton"
-                            class="action-button"
-                            disabled
-                        >
-                            Invert colors
-                        </button>
-
-                        <button
-                            id="resetButton"
-                            class="secondary-button"
-                            disabled
-                        >
-                            Reset result
-                        </button>
-                    </div>
-
-                    <div class="adjustment-control">
-                        <div class="adjustment-heading">
-                            <label for="brightnessSlider">Brightness</label>
-                            <output id="brightnessValue" for="brightnessSlider">
-                                0
-                            </output>
-                        </div>
-
-                        <input
-                            type="range"
-                            id="brightnessSlider"
-                            min="-100"
-                            max="100"
-                            value="0"
-                            step="1"
-                            disabled
-                        >
-
-                        <div class="range-labels">
-                            <span>-100</span>
-                            <span>0</span>
-                            <span>+100</span>
-                        </div>
-
-                        <button
-                            id="applyBrightnessButton"
-                            class="action-button"
-                            disabled
-                        >
-                            Apply brightness
-                        </button>
-                    </div>
-
-                    <div class="result-area">
-                        <h3>Processed image</h3>
-                        <div class="image-preview result-preview">
-                            <span id="resultPlaceholder">
-                                Result will appear here
-                            </span>
-                            <canvas id="resultCanvas" hidden></canvas>
-                        </div>
-                    </div>
-                </div>
-            </article>
-
-            <article class="panel">
-                <div class="panel-heading">
-                    <span class="panel-number">02</span>
-                    <div>
-                        <h2>Пороговая обработка</h2>
-                        <p>Локальные и адаптивные методы</p>
-                    </div>
+                    <button id="applyBrightnessButton" disabled>
+                        Apply Brightness
+                    </button>
                 </div>
 
-                <div class="placeholder">
-                    <div class="placeholder-icon">◩</div>
-                    <h3>Область бинаризации</h3>
-                    <p>
-                        Здесь будут доступны методы локальной
-                        и адаптивной пороговой обработки.
-                    </p>
+                <div class="adjustment-control">
+                    <div class="adjustment-heading">
+                        <label for="contrastSlider">Contrast</label>
+                        <output id="contrastValue">0</output>
+                    </div>
+                    <input
+                        type="range"
+                        id="contrastSlider"
+                        min="-100"
+                        max="100"
+                        value="0"
+                        step="1"
+                        disabled
+                    >
+                    <div class="range-labels">
+                        <span>-100</span>
+                        <span>0</span>
+                        <span>+100</span>
+                    </div>
+                    <button id="applyContrastButton" disabled>
+                        Apply Contrast
+                    </button>
                 </div>
-            </article>
+
+                <div class="result-container">
+                    <h3>Processed Image</h3>
+                    <canvas id="resultCanvas" hidden></canvas>
+                    <p id="resultPlaceholder">Processed image will appear here</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Thresholding</h2>
+                <p class="placeholder-text">
+                    Local and adaptive thresholding methods will be added in
+                    upcoming commits.
+                </p>
+            </div>
         </section>
 
-        <footer class="footer">
-            <span>Обработка изображений</span>
-            <span>Веб-приложение</span>
+        <footer class="app-footer">
+            <p>Laboratory Work 3 — Variant 11</p>
         </footer>
     </main>
 
