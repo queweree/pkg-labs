@@ -113,10 +113,58 @@
 
             <div class="panel">
                 <h2>Thresholding</h2>
+
                 <p class="placeholder-text">
-                    Local and adaptive thresholding methods will be added in
-                    upcoming commits.
+                    Local thresholding methods convert a grayscale image into
+                    a binary image using thresholds calculated from local
+                    neighborhoods.
                 </p>
+
+                <div class="adjustment-control">
+                    <div class="adjustment-heading">
+                        <label for="localMeanWindow">Neighborhood Window Size</label>
+                        <output id="localMeanWindowValue">15</output>
+                    </div>
+                    <input
+                        type="range"
+                        id="localMeanWindow"
+                        min="3"
+                        max="51"
+                        value="15"
+                        step="2"
+                        disabled
+                    >
+                    <div class="range-labels">
+                        <span>3 × 3</span>
+                        <span>27 × 27</span>
+                        <span>51 × 51</span>
+                    </div>
+                </div>
+
+                <div class="adjustment-control">
+                    <div class="adjustment-heading">
+                        <label for="localMeanOffset">Threshold Offset</label>
+                        <output id="localMeanOffsetValue">0</output>
+                    </div>
+                    <input
+                        type="range"
+                        id="localMeanOffset"
+                        min="-30"
+                        max="30"
+                        value="0"
+                        step="1"
+                        disabled
+                    >
+                    <div class="range-labels">
+                        <span>-30</span>
+                        <span>0</span>
+                        <span>+30</span>
+                    </div>
+                </div>
+
+                <button id="localMeanButton" disabled>
+                    Apply Local Mean Threshold
+                </button>
             </div>
         </section>
 

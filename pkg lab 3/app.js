@@ -17,6 +17,12 @@ const applyContrastButton = document.getElementById("applyContrastButton");
 
 const stretchButton = document.getElementById("stretchButton");
 
+const localMeanWindow = document.getElementById("localMeanWindow");
+const localMeanWindowValue = document.getElementById("localMeanWindowValue");
+const localMeanOffset = document.getElementById("localMeanOffset");
+const localMeanOffsetValue = document.getElementById("localMeanOffsetValue");
+const localMeanButton = document.getElementById("localMeanButton");
+
 const resultCanvas = document.getElementById("resultCanvas");
 const resultPlaceholder = document.getElementById("resultPlaceholder");
 
@@ -37,6 +43,10 @@ function setProcessingControlsEnabled(enabled) {
     applyContrastButton.disabled = !enabled;
 
     stretchButton.disabled = !enabled;
+
+    localMeanWindow.disabled = !enabled;
+    localMeanOffset.disabled = !enabled;
+    localMeanButton.disabled = !enabled;
 }
 
 function clearResult() {
@@ -228,7 +238,6 @@ stretchButton.addEventListener("click", () => {
     let minIntensity = 255;
     let maxIntensity = 0;
 
-    // Find the minimum and maximum grayscale intensity.
     for (let i = 0; i < pixels.length; i += 4) {
         const intensity = Math.round(
             0.299 * pixels[i] +
@@ -240,7 +249,6 @@ stretchButton.addEventListener("click", () => {
         maxIntensity = Math.max(maxIntensity, intensity);
     }
 
-    // Avoid division by zero when all pixels have the same intensity.
     if (maxIntensity === minIntensity) {
         displayImageData(imageData);
         return;
@@ -248,7 +256,6 @@ stretchButton.addEventListener("click", () => {
 
     const intensityRange = maxIntensity - minIntensity;
 
-    // Stretch each RGB channel using the intensity range.
     for (let i = 0; i < pixels.length; i += 4) {
         pixels[i] = clamp(
             ((pixels[i] - minIntensity) * 255) / intensityRange
@@ -262,6 +269,108 @@ stretchButton.addEventListener("click", () => {
     }
 
     displayImageData(imageData);
+});
+
+// Build an integral image for fast local neighborhood sums.
+function buildIntegralImage(gray, width, height) {
+    const stride = width + 1;
+    const integral = new Float64Array((width + 1) * (height + 1));
+
+    for (let y = 1; y <= height; y++) {
+        let rowSum = 0;
+
+        for (let x = 1; x <= width; x++) {
+            rowSum += gray[(y - 1) * width + (x - 1)];
+
+            integral[y * stride + x] =
+                integral[(y - 1) * stride + x] + rowSum;
+        }
+    }
+
+    return integral;
+}
+
+// Return the sum of a rectangle using four integral-image values.
+// Rectangle bounds are half-open: [x1, x2) × [y1, y2).
+function rectangleSum(integral, stride, x1, y1, x2, y2) {
+    return (
+        integral[y2 * stride + x2] -
+        integral[y1 * stride + x2] -
+        integral[y2 * stride + x1] +
+        integral[y1 * stride + x1]
+    );
+}
+
+localMeanWindow.addEventListener("input", () => {
+    localMeanWindowValue.value = localMeanWindow.value;
+    localMeanWindowValue.textContent = localMeanWindow.value;
+});
+
+localMeanOffset.addEventListener("input", () => {
+    localMeanOffsetValue.value = localMeanOffset.value;
+    localMeanOffsetValue.textContent = localMeanOffset.value;
+});
+
+localMeanButton.addEventListener("click", () => {
+    if (!originalImage) {
+        return;
+    }
+
+    const imageData = getOriginalImageData();
+    const { width, height, data } = imageData;
+    const pixelCount = width * height;
+
+    const gray = new Uint8Array(pixelCount);
+
+    // Convert RGB to grayscale first.
+    for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+        gray[p] = Math.round(
+            0.299 * data[i] +
+            0.587 * data[i + 1] +
+            0.114 * data[i + 2]
+        );
+    }
+
+    const integral = buildIntegralImage(gray, width, height);
+    const stride = width + 1;
+    const radius = Math.floor(Number(localMeanWindow.value) / 2);
+    const offset = Number(localMeanOffset.value);
+
+    const output = new ImageData(width, height);
+    const outputPixels = output.data;
+
+    for (let y = 0; y < height; y++) {
+        const y1 = Math.max(0, y - radius);
+        const y2 = Math.min(height, y + radius + 1);
+
+        for (let x = 0; x < width; x++) {
+            const x1 = Math.max(0, x - radius);
+            const x2 = Math.min(width, x + radius + 1);
+
+            const sum = rectangleSum(
+                integral,
+                stride,
+                x1,
+                y1,
+                x2,
+                y2
+            );
+
+            const area = (x2 - x1) * (y2 - y1);
+            const localMean = sum / area;
+            const threshold = localMean - offset;
+
+            const value = gray[y * width + x] > threshold ? 255 : 0;
+            const index = (y * width + x) * 4;
+
+            outputPixels[index] = value;
+            outputPixels[index + 1] = value;
+            outputPixels[index + 2] = value;
+            outputPixels[index + 3] = 255;
+        }
+    }
+
+    displayImageData(output);
 });
 
 resetButton.addEventListener("click", () => {

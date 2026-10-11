@@ -189,14 +189,18 @@ button:disabled {
 }
 
 #brightnessSlider,
-#contrastSlider {
+#contrastSlider,
+#localMeanWindow,
+#localMeanOffset {
     width: 100%;
     accent-color: #7182ff;
     cursor: pointer;
 }
 
 #brightnessSlider:disabled,
-#contrastSlider:disabled {
+#contrastSlider:disabled,
+#localMeanWindow:disabled,
+#localMeanOffset:disabled {
     cursor: not-allowed;
 }
 
@@ -216,6 +220,11 @@ button:disabled {
     color: #a7b0c2;
     font-size: 13px;
     line-height: 1.5;
+}
+
+#localMeanButton {
+    width: 100%;
+    margin-top: 18px;
 }
 
 .placeholder-text {
