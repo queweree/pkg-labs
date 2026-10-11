@@ -23,9 +23,7 @@
                     <input type="file" id="imageInput" accept="image/*">
                 </div>
 
-                <div class="image-info" id="imageInfo">
-                    No image selected
-                </div>
+                <div class="image-info" id="imageInfo">No image selected</div>
 
                 <div class="preview-container">
                     <h3>Original Image</h3>
@@ -33,15 +31,9 @@
                 </div>
 
                 <div class="controls">
-                    <button id="grayscaleButton" disabled>
-                        Convert to Grayscale
-                    </button>
-                    <button id="invertButton" disabled>
-                        Invert Colors
-                    </button>
-                    <button id="resetButton" disabled>
-                        Reset Result
-                    </button>
+                    <button id="grayscaleButton" disabled>Convert to Grayscale</button>
+                    <button id="invertButton" disabled>Invert Colors</button>
+                    <button id="resetButton" disabled>Reset Result</button>
                 </div>
 
                 <div class="adjustment-control">
@@ -49,23 +41,9 @@
                         <label for="brightnessSlider">Brightness</label>
                         <output id="brightnessValue">0</output>
                     </div>
-                    <input
-                        type="range"
-                        id="brightnessSlider"
-                        min="-100"
-                        max="100"
-                        value="0"
-                        step="1"
-                        disabled
-                    >
-                    <div class="range-labels">
-                        <span>-100</span>
-                        <span>0</span>
-                        <span>+100</span>
-                    </div>
-                    <button id="applyBrightnessButton" disabled>
-                        Apply Brightness
-                    </button>
+                    <input type="range" id="brightnessSlider" min="-100" max="100" value="0" disabled>
+                    <div class="range-labels"><span>-100</span><span>0</span><span>+100</span></div>
+                    <button id="applyBrightnessButton" disabled>Apply Brightness</button>
                 </div>
 
                 <div class="adjustment-control">
@@ -73,35 +51,17 @@
                         <label for="contrastSlider">Contrast</label>
                         <output id="contrastValue">0</output>
                     </div>
-                    <input
-                        type="range"
-                        id="contrastSlider"
-                        min="-100"
-                        max="100"
-                        value="0"
-                        step="1"
-                        disabled
-                    >
-                    <div class="range-labels">
-                        <span>-100</span>
-                        <span>0</span>
-                        <span>+100</span>
-                    </div>
-                    <button id="applyContrastButton" disabled>
-                        Apply Contrast
-                    </button>
+                    <input type="range" id="contrastSlider" min="-100" max="100" value="0" disabled>
+                    <div class="range-labels"><span>-100</span><span>0</span><span>+100</span></div>
+                    <button id="applyContrastButton" disabled>Apply Contrast</button>
                 </div>
 
                 <div class="adjustment-control">
                     <div class="adjustment-heading">
                         <label for="stretchButton">Linear Contrast Stretching</label>
                     </div>
-                    <p class="control-description">
-                        Automatically expand the image intensity range to 0–255.
-                    </p>
-                    <button id="stretchButton" disabled>
-                        Stretch Contrast
-                    </button>
+                    <p class="control-description">Expand the image intensity range to 0–255.</p>
+                    <button id="stretchButton" disabled>Stretch Contrast</button>
                 </div>
 
                 <div class="result-container">
@@ -113,11 +73,9 @@
 
             <div class="panel">
                 <h2>Thresholding</h2>
-
                 <p class="placeholder-text">
-                    Local thresholding methods convert a grayscale image into
-                    a binary image using thresholds calculated from local
-                    neighborhoods.
+                    Local thresholding methods use statistics calculated from
+                    neighboring pixels. Integral images speed up window calculations.
                 </p>
 
                 <div class="adjustment-control">
@@ -125,46 +83,32 @@
                         <label for="localMeanWindow">Neighborhood Window Size</label>
                         <output id="localMeanWindowValue">15</output>
                     </div>
-                    <input
-                        type="range"
-                        id="localMeanWindow"
-                        min="3"
-                        max="51"
-                        value="15"
-                        step="2"
-                        disabled
-                    >
-                    <div class="range-labels">
-                        <span>3 × 3</span>
-                        <span>27 × 27</span>
-                        <span>51 × 51</span>
-                    </div>
+                    <input type="range" id="localMeanWindow" min="3" max="51" value="15" step="2" disabled>
+                    <div class="range-labels"><span>3 × 3</span><span>27 × 27</span><span>51 × 51</span></div>
                 </div>
 
                 <div class="adjustment-control">
                     <div class="adjustment-heading">
-                        <label for="localMeanOffset">Threshold Offset</label>
+                        <label for="localMeanOffset">Mean Threshold Offset</label>
                         <output id="localMeanOffsetValue">0</output>
                     </div>
-                    <input
-                        type="range"
-                        id="localMeanOffset"
-                        min="-30"
-                        max="30"
-                        value="0"
-                        step="1"
-                        disabled
-                    >
-                    <div class="range-labels">
-                        <span>-30</span>
-                        <span>0</span>
-                        <span>+30</span>
-                    </div>
+                    <input type="range" id="localMeanOffset" min="-30" max="30" value="0" disabled>
+                    <div class="range-labels"><span>-30</span><span>0</span><span>+30</span></div>
                 </div>
 
-                <button id="localMeanButton" disabled>
-                    Apply Local Mean Threshold
-                </button>
+                <button id="localMeanButton" disabled>Apply Local Mean Threshold</button>
+
+                <div class="adjustment-control">
+                    <div class="adjustment-heading">
+                        <label for="niblackK">Niblack Parameter (k)</label>
+                        <output id="niblackKValue">-0.2</output>
+                    </div>
+                    <input type="range" id="niblackK" min="-1" max="1" value="-0.2" step="0.05" disabled>
+                    <div class="range-labels"><span>-1.0</span><span>0</span><span>+1.0</span></div>
+                    <p class="control-description">Controls the influence of local standard deviation.</p>
+                </div>
+
+                <button id="niblackButton" disabled>Apply Niblack Threshold</button>
             </div>
         </section>
 

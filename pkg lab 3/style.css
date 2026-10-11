@@ -145,7 +145,7 @@ button {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s ease, opacity 0.15s ease;
+    transition: background 0.15s ease;
 }
 
 button:hover:not(:disabled) {
@@ -188,19 +188,13 @@ button:disabled {
     text-align: right;
 }
 
-#brightnessSlider,
-#contrastSlider,
-#localMeanWindow,
-#localMeanOffset {
+input[type="range"] {
     width: 100%;
     accent-color: #7182ff;
     cursor: pointer;
 }
 
-#brightnessSlider:disabled,
-#contrastSlider:disabled,
-#localMeanWindow:disabled,
-#localMeanOffset:disabled {
+input[type="range"]:disabled {
     cursor: not-allowed;
 }
 
@@ -211,7 +205,9 @@ button:disabled {
     font-size: 12px;
 }
 
-.adjustment-control button {
+.adjustment-control button,
+#localMeanButton,
+#niblackButton {
     width: 100%;
 }
 
@@ -222,8 +218,8 @@ button:disabled {
     line-height: 1.5;
 }
 
-#localMeanButton {
-    width: 100%;
+#localMeanButton,
+#niblackButton {
     margin-top: 18px;
 }
 
