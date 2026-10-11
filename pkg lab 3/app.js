@@ -1,465 +1,101 @@
-
-const imageInput = document.getElementById("imageInput");
-const previewImage = document.getElementById("previewImage");
-const imageInfo = document.getElementById("imageInfo");
-
-const grayscaleButton = document.getElementById("grayscaleButton");
-const invertButton = document.getElementById("invertButton");
-const resetButton = document.getElementById("resetButton");
-
-const brightnessSlider = document.getElementById("brightnessSlider");
-const brightnessValue = document.getElementById("brightnessValue");
-const applyBrightnessButton = document.getElementById("applyBrightnessButton");
-
-const contrastSlider = document.getElementById("contrastSlider");
-const contrastValue = document.getElementById("contrastValue");
-const applyContrastButton = document.getElementById("applyContrastButton");
-
-const stretchButton = document.getElementById("stretchButton");
-
-const localMeanWindow = document.getElementById("localMeanWindow");
-const localMeanWindowValue = document.getElementById("localMeanWindowValue");
-const localMeanOffset = document.getElementById("localMeanOffset");
-const localMeanOffsetValue = document.getElementById("localMeanOffsetValue");
-const localMeanButton = document.getElementById("localMeanButton");
-
-const niblackK = document.getElementById("niblackK");
-const niblackKValue = document.getElementById("niblackKValue");
-const niblackButton = document.getElementById("niblackButton");
-
-const sauvolaK = document.getElementById("sauvolaK");
-const sauvolaKValue = document.getElementById("sauvolaKValue");
-const sauvolaButton = document.getElementById("sauvolaButton");
-
-const resultCanvas = document.getElementById("resultCanvas");
-const resultPlaceholder = document.getElementById("resultPlaceholder");
-const resultStatus = document.getElementById("resultStatus");
-const downloadButton = document.getElementById("downloadButton");
-const resultContext = resultCanvas.getContext("2d");
-
-let originalImage = null;
-let currentImageUrl = null;
-let hasProcessedResult = false;
-
-function setProcessingControlsEnabled(enabled) {
-    [
-        grayscaleButton, invertButton, resetButton,
-        brightnessSlider, applyBrightnessButton,
-        contrastSlider, applyContrastButton, stretchButton,
-        localMeanWindow, localMeanOffset, localMeanButton,
-        niblackK, niblackButton,
-        sauvolaK, sauvolaButton
-    ].forEach(control => {
-        control.disabled = !enabled;
-    });
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const originalCanvas=$("originalCanvas"),resultCanvas=$("resultCanvas"),octx=originalCanvas.getContext("2d",{willReadFrequently:true}),rctx=resultCanvas.getContext("2d",{willReadFrequently:true});
+let originalImageData=null,imageLabel="",currentPanel="pixel",hasResult=false;
+const methodInfo={
+ mean:"Порог каждого пикселя равен среднему значению яркости в локальном окне. Интегральное изображение ускоряет вычисление среднего.",
+ niblack:"Локальный порог Ниблэка: T = m + k · s, где m — среднее, s — стандартное отклонение яркости.",
+ sauvola:"Адаптивный порог Сауволы: T = m · [1 + k · (s / R − 1)]. Хорошо подходит для текста и неоднородного освещения."
+};
+function setStatus(s){$("statusText").textContent=s}
+function showImage(img,name){
+ const max=1800,scale=Math.min(1,max/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height));
+ const w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale)),h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
+ originalCanvas.width=resultCanvas.width=w;originalCanvas.height=resultCanvas.height=h;
+ octx.clearRect(0,0,w,h);octx.drawImage(img,0,0,w,h);
+ originalImageData=octx.getImageData(0,0,w,h);imageLabel=name;hasResult=false;
+ $("emptyState").hidden=true;$("resultPlaceholder").hidden=false;
+ rctx.clearRect(0,0,w,h);$("imageName").textContent=name;$("imageSize").textContent=`${w} × ${h}`;
+ $("statDimensions").textContent=`${w} × ${h}`;$("statPixels").textContent=(w*h).toLocaleString("ru-RU");
+ $("statAlgorithm").textContent="Не выбран";$("statTime").textContent="—";$("resultLabel").textContent="Ожидание обработки";
+ $("downloadBtn").disabled=true;setStatus("Изображение загружено");
 }
-
-function clearResult() {
-    resultContext.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-    resultCanvas.hidden = true;
-    resultPlaceholder.hidden = false;
-    downloadButton.disabled = true;
-    hasProcessedResult = false;
+function loadFile(file){if(!file)return;if(!file.type.startsWith("image/")){setStatus("Выбери файл изображения");return}
+ const url=URL.createObjectURL(file),img=new Image();
+ img.onload=()=>{showImage(img,file.name);URL.revokeObjectURL(url);applyProcessing()};
+ img.onerror=()=>{URL.revokeObjectURL(url);setStatus("Не удалось открыть изображение")};img.src=url;
 }
-
-function getOriginalImageData() {
-    const canvas = document.createElement("canvas");
-    canvas.width = originalImage.naturalWidth;
-    canvas.height = originalImage.naturalHeight;
-
-    const context = canvas.getContext("2d");
-    context.drawImage(originalImage, 0, 0);
-
-    return context.getImageData(0, 0, canvas.width, canvas.height);
+$("fileInput").addEventListener("change",e=>loadFile(e.target.files[0]));
+$("originalWrap").addEventListener("dragover",e=>{e.preventDefault();$("originalWrap").style.outline="2px solid #b7f36b"});
+$("originalWrap").addEventListener("dragleave",()=>{$("originalWrap").style.outline=""});
+$("originalWrap").addEventListener("drop",e=>{e.preventDefault();$("originalWrap").style.outline="";loadFile(e.dataTransfer.files[0])});
+function sampleSvg(type){
+ if(type==="document")return `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="500"><defs><linearGradient id="bg"><stop stop-color="#bdbdbd"/><stop offset="1" stop-color="#f8f8f8"/></linearGradient><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".7" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 .6 0 0 0 0 .6 0 0 0 0 .6 0 0 0 .12 0"/></filter></defs><rect width="720" height="500" fill="url(#bg)"/><g transform="rotate(-2 360 250)" fill="#292929" font-family="Georgia,serif"><text x="110" y="95" font-size="28" font-weight="bold">ЛАБОРАТОРНАЯ РАБОТА</text><text x="110" y="132" font-size="17">Основы обработки цифровых изображений</text><path d="M110 155H610" stroke="#444"/><text x="110" y="198" font-size="19">Вариант 11. Пороговая обработка</text><text x="110" y="235" font-size="15">Исследование методов локальной бинаризации</text><text x="110" y="260" font-size="15">при неоднородном освещении изображения.</text><text x="110" y="310" font-size="14">1. Локальный порог по среднему значению</text><text x="110" y="337" font-size="14">2. Метод Ниблэка</text><text x="110" y="364" font-size="14">3. Адаптивный метод Сауволы</text><text x="110" y="420" font-size="13">Дата: 09.10.2026</text></g><rect width="720" height="500" filter="url(#n)" opacity=".6"/></svg>`;
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="500"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#333"/><stop offset=".45" stop-color="#e0e0e0"/><stop offset="1" stop-color="#777"/></linearGradient><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="3" seed="9"/><feColorMatrix values=".3 0 0 0 .2 0 .3 0 0 .2 0 0 .3 0 .2 0 0 0 .3 0"/></filter></defs><rect width="720" height="500" fill="url(#g)"/><rect width="720" height="500" filter="url(#n)" opacity=".6"/><g fill="#282828" font-family="Georgia,serif" opacity=".9"><text x="100" y="150" font-size="30">Текст на сложном фоне</text><text x="100" y="200" font-size="22">Локальная бинаризация</text><text x="100" y="250" font-size="22">Саувола и Ниблэк</text><text x="100" y="300" font-size="20">Порог зависит от окрестности</text></g></svg>`;
 }
-
-function displayImageData(imageData, operationName = "Processing complete") {
-    resultCanvas.width = imageData.width;
-    resultCanvas.height = imageData.height;
-    resultContext.putImageData(imageData, 0, 0);
-
-    resultCanvas.hidden = false;
-    resultPlaceholder.hidden = true;
-    downloadButton.disabled = false;
-    hasProcessedResult = true;
-
-    resultStatus.textContent =
-        `${operationName}. Output size: ${imageData.width} × ${imageData.height} px.`;
+function loadSample(type){
+ const blob=new Blob([sampleSvg(type)],{type:"image/svg+xml"}),url=URL.createObjectURL(blob),img=new Image();
+ img.onload=()=>{showImage(img,type==="document"?"sample-document.svg":"sample-uneven.svg");URL.revokeObjectURL(url);applyProcessing()};
+ img.src=url;
 }
-
-function showImageInfo(file, image) {
-    const sizeInKB = (file.size / 1024).toFixed(1);
-
-    imageInfo.textContent =
-        `${file.name} · ${image.naturalWidth} × ${image.naturalHeight} px · ${sizeInKB} KB`;
+$("sampleDocument").addEventListener("click",()=>loadSample("document"));
+$("sampleUneven").addEventListener("click",()=>loadSample("uneven"));
+function updatePanel(panel){
+ currentPanel=panel;const pixel=panel==="pixel";
+ $("pixelControls").hidden=!pixel;$("thresholdControls").hidden=pixel;
+ $("pageTitle").textContent=pixel?"Поэлементные операции":"Локальная и адаптивная пороговая обработка";
+ $("pageSubtitle").textContent=pixel?"Преобразование яркости каждого пикселя и линейное контрастирование.":"Локальные пороги и адаптивная бинаризация методом Сауволы.";
+ $("controlTitle").textContent=pixel?"Настройки преобразования":"Настройки пороговой обработки";
+ document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.panel===panel));
+ $("statAlgorithm").textContent="Не выбран";
+ if(originalImageData)applyProcessing();
 }
-
-function clamp(value) {
-    return Math.max(0, Math.min(255, Math.round(value)));
+document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>updatePanel(b.dataset.panel)));
+$("thresholdMethod").addEventListener("change",()=>{
+ const m=$("thresholdMethod").value;$("methodDescription").textContent=methodInfo[m];
+ $("kBlock").hidden=m!=="niblack";$("sauvolaKBlock").hidden=m!=="sauvola";$("rBlock").hidden=m!=="sauvola";
+ applyProcessing();
+});
+function syncRanges(){
+ $("brightnessOut").textContent=$("brightness").value;$("contrastOut").textContent=(+$("contrast").value/100).toFixed(1)+"×";
+ $("windowOut").textContent=$("windowSize").value+" px";$("kOut").textContent=(+$("kValue").value/100).toFixed(2);
+ $("rOut").textContent=$("rValue2").value;$("sauvolaKOut").textContent=(+$("sauvolaK").value/100).toFixed(2);
 }
-
-function getGrayscalePixels(imageData) {
-    const { data, width, height } = imageData;
-    const gray = new Uint8Array(width * height);
-
-    for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-        gray[p] = Math.round(
-            0.299 * data[i] +
-            0.587 * data[i + 1] +
-            0.114 * data[i + 2]
-        );
-    }
-
-    return gray;
+["brightness","contrast","windowSize","kValue","rValue2","sauvolaK"].forEach(id=>$(id).addEventListener("input",()=>{syncRanges();if(originalImageData)applyProcessing()}));
+["operation","lowCut","highCut","foreground"].forEach(id=>$(id).addEventListener("change",()=>{toggleBrightness();if(originalImageData)applyProcessing()}));
+function toggleBrightness(){const bright=$("operation").value==="brightness";$("brightnessBlock").style.opacity=bright?"1":".45";$("contrastBlock").style.opacity=bright?"1":".45"}
+function applyProcessing(){
+ if(!originalImageData){setStatus("Сначала загрузи изображение");return}
+ const btn=$("applyBtn");btn.disabled=true;setStatus("Выполняется обработка…");
+ // Синхронный расчёт на пиксельных массивах, без высокоуровневых фильтров.
+ const start=performance.now();let output,algorithm;
+ try{
+  if(currentPanel==="pixel"){
+   const op=$("operation").value;
+   const res=ImageAlgorithms.pointOperation(originalImageData.data,op,{low:$("lowCut").value,high:$("highCut").value,brightness:$("brightness").value,contrast:+$("contrast").value/100});
+   output=res.data;algorithm=({contrast:"Линейное контрастирование",gray:"Оттенки серого",invert:"Инверсия",brightness:"Яркость и контраст"})[op];
+  }else{
+   const method=$("thresholdMethod").value;
+   output=ImageAlgorithms.threshold(originalImageData.data,originalCanvas.width,originalCanvas.height,{method,window:$("windowSize").value,k:+$("kValue").value/100,sauvolaK:+$("sauvolaK").value/100,R:$("rValue2").value,foreground:$("foreground").value});
+   algorithm=({mean:"Локальное среднее",niblack:"Метод Ниблэка",sauvola:"Метод Сауволы"})[method];
+  }
+  rctx.putImageData(new ImageData(output,originalCanvas.width,originalCanvas.height),0,0);
+  hasResult=true;$("resultPlaceholder").hidden=true;$("downloadBtn").disabled=false;
+  const ms=performance.now()-start;$("statAlgorithm").textContent=algorithm;$("statTime").textContent=ms<1000?Math.round(ms)+" мс":(ms/1000).toFixed(2)+" с";
+  $("resultLabel").textContent=algorithm;setStatus("Обработка завершена");
+ }catch(err){console.error(err);setStatus("Ошибка обработки: "+err.message)}
+ finally{btn.disabled=false}
 }
-
-function buildIntegralImage(values, width, height) {
-    const stride = width + 1;
-    const integral = new Float64Array(stride * (height + 1));
-
-    for (let y = 1; y <= height; y++) {
-        let rowSum = 0;
-
-        for (let x = 1; x <= width; x++) {
-            rowSum += values[(y - 1) * width + x - 1];
-            integral[y * stride + x] =
-                integral[(y - 1) * stride + x] + rowSum;
-        }
-    }
-
-    return integral;
-}
-
-function rectangleSum(integral, stride, x1, y1, x2, y2) {
-    return integral[y2 * stride + x2]
-        - integral[y1 * stride + x2]
-        - integral[y2 * stride + x1]
-        + integral[y1 * stride + x1];
-}
-
-function getLocalStatistics(gray, width, height, windowSize) {
-    const count = width * height;
-    const squared = new Float64Array(count);
-
-    for (let i = 0; i < count; i++) {
-        squared[i] = gray[i] * gray[i];
-    }
-
-    return {
-        sum: buildIntegralImage(gray, width, height),
-        squaredSum: buildIntegralImage(squared, width, height),
-        width,
-        height,
-        stride: width + 1,
-        radius: Math.floor(windowSize / 2)
-    };
-}
-
-function getWindowStatistics(stats, x, y) {
-    const { width, height, stride, radius, sum, squaredSum } = stats;
-
-    const x1 = Math.max(0, x - radius);
-    const y1 = Math.max(0, y - radius);
-    const x2 = Math.min(width, x + radius + 1);
-    const y2 = Math.min(height, y + radius + 1);
-
-    const area = (x2 - x1) * (y2 - y1);
-    const localSum = rectangleSum(sum, stride, x1, y1, x2, y2);
-    const localSquaredSum = rectangleSum(
-        squaredSum, stride, x1, y1, x2, y2
-    );
-
-    const mean = localSum / area;
-    const variance = Math.max(0, localSquaredSum / area - mean * mean);
-
-    return {
-        mean,
-        standardDeviation: Math.sqrt(variance)
-    };
-}
-
-function makeBinaryImage(gray, width, height, thresholdFunction) {
-    const output = new ImageData(width, height);
-
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const index = y * width + x;
-            const value = gray[index] > thresholdFunction(x, y) ? 255 : 0;
-            const outIndex = index * 4;
-
-            output.data[outIndex] = value;
-            output.data[outIndex + 1] = value;
-            output.data[outIndex + 2] = value;
-            output.data[outIndex + 3] = 255;
-        }
-    }
-
-    return output;
-}
-
-imageInput.addEventListener("change", () => {
-    const file = imageInput.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-        imageInfo.textContent = "Please select a valid image file.";
-        imageInput.value = "";
-        return;
-    }
-
-    if (currentImageUrl) URL.revokeObjectURL(currentImageUrl);
-    currentImageUrl = URL.createObjectURL(file);
-
-    const loadedImage = new Image();
-
-    loadedImage.onload = () => {
-        originalImage = loadedImage;
-        previewImage.src = currentImageUrl;
-        previewImage.hidden = false;
-
-        showImageInfo(file, loadedImage);
-        setProcessingControlsEnabled(true);
-        clearResult();
-        resultStatus.textContent = "Image loaded. Choose an operation.";
-
-        brightnessSlider.value = "0";
-        brightnessValue.value = "0";
-        brightnessValue.textContent = "0";
-
-        contrastSlider.value = "0";
-        contrastValue.value = "0";
-        contrastValue.textContent = "0";
-    };
-
-    loadedImage.onerror = () => {
-        imageInfo.textContent = "The selected image could not be loaded.";
-        resultStatus.textContent = "Image loading failed.";
-        setProcessingControlsEnabled(false);
-    };
-
-    loadedImage.src = currentImageUrl;
+$("applyBtn").addEventListener("click",applyProcessing);
+$("resetBtn").addEventListener("click",()=>{
+ $("operation").value="contrast";$("brightness").value=0;$("contrast").value=100;$("lowCut").value=0;$("highCut").value=255;
+ $("thresholdMethod").value="sauvola";$("windowSize").value=31;$("kValue").value=20;$("rValue2").value=128;$("sauvolaK").value=20;$("foreground").value="dark";
+ $("methodDescription").textContent=methodInfo.sauvola;$("kBlock").hidden=true;$("sauvolaKBlock").hidden=false;$("rBlock").hidden=false;
+ syncRanges();toggleBrightness();if(originalImageData)applyProcessing();
 });
-
-grayscaleButton.addEventListener("click", () => {
-    if (!originalImage) return;
-
-    const imageData = getOriginalImageData();
-    const gray = getGrayscalePixels(imageData);
-
-    for (let p = 0, i = 0; p < gray.length; p++, i += 4) {
-        imageData.data[i] = gray[p];
-        imageData.data[i + 1] = gray[p];
-        imageData.data[i + 2] = gray[p];
-    }
-
-    displayImageData(imageData, "Grayscale conversion complete");
+$("downloadBtn").addEventListener("click",()=>{
+ if(!hasResult)return;const a=document.createElement("a");a.download="lab3-result.png";a.href=resultCanvas.toDataURL("image/png");a.click();
 });
-
-invertButton.addEventListener("click", () => {
-    if (!originalImage) return;
-
-    const imageData = getOriginalImageData();
-
-    for (let i = 0; i < imageData.data.length; i += 4) {
-        imageData.data[i] = 255 - imageData.data[i];
-        imageData.data[i + 1] = 255 - imageData.data[i + 1];
-        imageData.data[i + 2] = 255 - imageData.data[i + 2];
-    }
-
-    displayImageData(imageData, "Color inversion complete");
-});
-
-brightnessSlider.addEventListener("input", () => {
-    brightnessValue.value = brightnessSlider.value;
-    brightnessValue.textContent = brightnessSlider.value;
-});
-
-applyBrightnessButton.addEventListener("click", () => {
-    if (!originalImage) return;
-
-    const imageData = getOriginalImageData();
-    const brightness = Number(brightnessSlider.value);
-
-    for (let i = 0; i < imageData.data.length; i += 4) {
-        imageData.data[i] = clamp(imageData.data[i] + brightness);
-        imageData.data[i + 1] = clamp(imageData.data[i + 1] + brightness);
-        imageData.data[i + 2] = clamp(imageData.data[i + 2] + brightness);
-    }
-
-    displayImageData(imageData, "Brightness adjustment complete");
-});
-
-contrastSlider.addEventListener("input", () => {
-    contrastValue.value = contrastSlider.value;
-    contrastValue.textContent = contrastSlider.value;
-});
-
-applyContrastButton.addEventListener("click", () => {
-    if (!originalImage) return;
-
-    const imageData = getOriginalImageData();
-    const contrast = Number(contrastSlider.value);
-    const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-
-    for (let i = 0; i < imageData.data.length; i += 4) {
-        imageData.data[i] = clamp(factor * (imageData.data[i] - 128) + 128);
-        imageData.data[i + 1] = clamp(factor * (imageData.data[i + 1] - 128) + 128);
-        imageData.data[i + 2] = clamp(factor * (imageData.data[i + 2] - 128) + 128);
-    }
-
-    displayImageData(imageData, "Contrast adjustment complete");
-});
-
-stretchButton.addEventListener("click", () => {
-    if (!originalImage) return;
-
-    const imageData = getOriginalImageData();
-    const gray = getGrayscalePixels(imageData);
-
-    let minValue = 255;
-    let maxValue = 0;
-
-    for (let i = 0; i < gray.length; i++) {
-        minValue = Math.min(minValue, gray[i]);
-        maxValue = Math.max(maxValue, gray[i]);
-    }
-
-    if (maxValue === minValue) {
-        displayImageData(imageData, "Contrast stretching skipped: intensity range is zero");
-        return;
-    }
-
-    const range = maxValue - minValue;
-
-    for (let i = 0; i < imageData.data.length; i += 4) {
-        imageData.data[i] = clamp((imageData.data[i] - minValue) * 255 / range);
-        imageData.data[i + 1] = clamp((imageData.data[i + 1] - minValue) * 255 / range);
-        imageData.data[i + 2] = clamp((imageData.data[i + 2] - minValue) * 255 / range);
-    }
-
-    displayImageData(imageData, "Linear contrast stretching complete");
-});
-
-localMeanWindow.addEventListener("input", () => {
-    localMeanWindowValue.value = localMeanWindow.value;
-    localMeanWindowValue.textContent = localMeanWindow.value;
-});
-
-localMeanOffset.addEventListener("input", () => {
-    localMeanOffsetValue.value = localMeanOffset.value;
-    localMeanOffsetValue.textContent = localMeanOffset.value;
-});
-
-localMeanButton.addEventListener("click", () => {
-    if (!originalImage) return;
-
-    const imageData = getOriginalImageData();
-    const { width, height } = imageData;
-    const gray = getGrayscalePixels(imageData);
-    const stats = getLocalStatistics(
-        gray, width, height, Number(localMeanWindow.value)
-    );
-    const offset = Number(localMeanOffset.value);
-
-    const output = makeBinaryImage(gray, width, height, (x, y) => {
-        return getWindowStatistics(stats, x, y).mean - offset;
-    });
-
-    displayImageData(output, "Local mean thresholding complete");
-});
-
-niblackK.addEventListener("input", () => {
-    const value = Number(niblackK.value).toFixed(2);
-    niblackKValue.value = value;
-    niblackKValue.textContent = value;
-});
-
-niblackButton.addEventListener("click", () => {
-    if (!originalImage) return;
-
-    const imageData = getOriginalImageData();
-    const { width, height } = imageData;
-    const gray = getGrayscalePixels(imageData);
-    const stats = getLocalStatistics(
-        gray, width, height, Number(localMeanWindow.value)
-    );
-    const k = Number(niblackK.value);
-
-    const output = makeBinaryImage(gray, width, height, (x, y) => {
-        const local = getWindowStatistics(stats, x, y);
-        return local.mean + k * local.standardDeviation;
-    });
-
-    displayImageData(output, "Niblack thresholding complete");
-});
-
-sauvolaK.addEventListener("input", () => {
-    const value = Number(sauvolaK.value).toFixed(2);
-    sauvolaKValue.value = value;
-    sauvolaKValue.textContent = value;
-});
-
-sauvolaButton.addEventListener("click", () => {
-    if (!originalImage) return;
-
-    const imageData = getOriginalImageData();
-    const { width, height } = imageData;
-    const gray = getGrayscalePixels(imageData);
-    const stats = getLocalStatistics(
-        gray, width, height, Number(localMeanWindow.value)
-    );
-
-    const k = Number(sauvolaK.value);
-    const R = 128;
-
-    const output = makeBinaryImage(gray, width, height, (x, y) => {
-        const local = getWindowStatistics(stats, x, y);
-
-        return local.mean * (
-            1 + k * (local.standardDeviation / R - 1)
-        );
-    });
-
-    displayImageData(output, "Sauvola adaptive thresholding complete");
-});
-
-resetButton.addEventListener("click", () => {
-    clearResult();
-
-    brightnessSlider.value = "0";
-    brightnessValue.value = "0";
-    brightnessValue.textContent = "0";
-
-    contrastSlider.value = "0";
-    contrastValue.value = "0";
-    contrastValue.textContent = "0";
-
-    resultStatus.textContent = "Result cleared. Choose another operation.";
-});
-
-downloadButton.addEventListener("click", () => {
-    if (!hasProcessedResult || resultCanvas.hidden) return;
-
-    resultCanvas.toBlob(blob => {
-        if (!blob) {
-            resultStatus.textContent = "Could not export the image.";
-            return;
-        }
-
-        const downloadUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-
-        link.href = downloadUrl;
-        link.download = "processed-image.png";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        URL.revokeObjectURL(downloadUrl);
-        resultStatus.textContent = "PNG export requested.";
-    }, "image/png");
-});
-
-window.addEventListener("beforeunload", () => {
-    if (currentImageUrl) URL.revokeObjectURL(currentImageUrl);
-});
+syncRanges();toggleBrightness();$("kBlock").hidden=true;
+})();

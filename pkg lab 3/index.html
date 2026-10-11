@@ -1,139 +1,74 @@
-
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Processing Lab — Variant 11</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10131a">
+  <title>Lab 3 — Обработка изображений</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <main class="app">
-        <header class="app-header">
-            <h1>Image Processing Lab</h1>
-            <p>Laboratory Work 3 — Image Processing Operations</p>
-        </header>
-
-        <section class="workspace">
-            <div class="panel">
-                <h2>Pixelwise Operations</h2>
-
-                <div class="upload-control">
-                    <label for="imageInput">Select an image</label>
-                    <input type="file" id="imageInput" accept="image/*">
-                </div>
-
-                <div class="image-info" id="imageInfo">No image selected</div>
-
-                <div class="preview-container">
-                    <h3>Original Image</h3>
-                    <img id="previewImage" alt="Original image preview" hidden>
-                </div>
-
-                <div class="controls">
-                    <button id="grayscaleButton" disabled>Convert to Grayscale</button>
-                    <button id="invertButton" disabled>Invert Colors</button>
-                    <button id="resetButton" disabled>Reset Result</button>
-                </div>
-
-                <div class="adjustment-control">
-                    <div class="adjustment-heading">
-                        <label for="brightnessSlider">Brightness</label>
-                        <output id="brightnessValue">0</output>
-                    </div>
-                    <input type="range" id="brightnessSlider" min="-100" max="100" value="0" disabled>
-                    <div class="range-labels"><span>-100</span><span>0</span><span>+100</span></div>
-                    <button id="applyBrightnessButton" disabled>Apply Brightness</button>
-                </div>
-
-                <div class="adjustment-control">
-                    <div class="adjustment-heading">
-                        <label for="contrastSlider">Contrast</label>
-                        <output id="contrastValue">0</output>
-                    </div>
-                    <input type="range" id="contrastSlider" min="-100" max="100" value="0" disabled>
-                    <div class="range-labels"><span>-100</span><span>0</span><span>+100</span></div>
-                    <button id="applyContrastButton" disabled>Apply Contrast</button>
-                </div>
-
-                <div class="adjustment-control">
-                    <div class="adjustment-heading">
-                        <label for="stretchButton">Linear Contrast Stretching</label>
-                    </div>
-                    <p class="control-description">Expand the image intensity range to 0–255.</p>
-                    <button id="stretchButton" disabled>Stretch Contrast</button>
-                </div>
-
-                <div class="result-container">
-                    <h3>Processed Image</h3>
-                    <canvas id="resultCanvas" hidden></canvas>
-                    <p id="resultPlaceholder">Processed image will appear here</p>
-                    <p class="control-description" id="resultStatus" role="status">
-                        Upload an image to begin.
-                    </p>
-                    <button id="downloadButton" disabled>Download Result as PNG</button>
-                </div>
-            </div>
-
-            <div class="panel">
-                <h2>Thresholding</h2>
-                <p class="placeholder-text">
-                    Compare local mean thresholding, Niblack thresholding,
-                    and Sauvola adaptive thresholding.
-                </p>
-
-                <div class="adjustment-control">
-                    <div class="adjustment-heading">
-                        <label for="localMeanWindow">Neighborhood Window Size</label>
-                        <output id="localMeanWindowValue">15</output>
-                    </div>
-                    <input type="range" id="localMeanWindow" min="3" max="51" value="15" step="2" disabled>
-                    <div class="range-labels"><span>3 × 3</span><span>27 × 27</span><span>51 × 51</span></div>
-                </div>
-
-                <div class="adjustment-control">
-                    <div class="adjustment-heading">
-                        <label for="localMeanOffset">Mean Threshold Offset</label>
-                        <output id="localMeanOffsetValue">0</output>
-                    </div>
-                    <input type="range" id="localMeanOffset" min="-30" max="30" value="0" disabled>
-                    <div class="range-labels"><span>-30</span><span>0</span><span>+30</span></div>
-                </div>
-
-                <button id="localMeanButton" disabled>Apply Local Mean Threshold</button>
-
-                <div class="adjustment-control">
-                    <div class="adjustment-heading">
-                        <label for="niblackK">Niblack Parameter (k)</label>
-                        <output id="niblackKValue">-0.20</output>
-                    </div>
-                    <input type="range" id="niblackK" min="-1" max="1" value="-0.2" step="0.05" disabled>
-                    <div class="range-labels"><span>-1.0</span><span>0</span><span>+1.0</span></div>
-                </div>
-
-                <button id="niblackButton" disabled>Apply Niblack Threshold</button>
-
-                <div class="adjustment-control">
-                    <div class="adjustment-heading">
-                        <label for="sauvolaK">Sauvola Parameter (k)</label>
-                        <output id="sauvolaKValue">0.20</output>
-                    </div>
-                    <input type="range" id="sauvolaK" min="0" max="1" value="0.2" step="0.05" disabled>
-                    <div class="range-labels"><span>0.0</span><span>0.5</span><span>1.0</span></div>
-                    <p class="control-description">
-                        Controls how local standard deviation affects the threshold.
-                    </p>
-                </div>
-
-                <button id="sauvolaButton" disabled>Apply Sauvola Threshold</button>
-            </div>
-        </section>
-
-        <footer class="app-footer">
-            <p>Laboratory Work 3 — Variant 11</p>
-        </footer>
-    </main>
-
-    <script src="app.js"></script>
+  <header class="topbar">
+    <div class="topbar-spacer" aria-hidden="true"></div>
+  </header>
+  <main class="app-shell">
+    <aside class="sidebar">
+      <div class="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО</div>
+      <h1>Обработка<br>изображений</h1>
+      <p class="muted intro">Вариант 11 · цифровая обработка</p>
+      <div class="nav-label">МЕТОДЫ</div>
+      <button class="nav-item active" data-panel="pixel"><span class="nav-icon">◐</span><span><b>Поэлементные операции</b><small>Яркость и контраст</small></span></button>
+      <button class="nav-item" data-panel="threshold"><span class="nav-icon">▦</span><span><b>Пороговая обработка</b><small>Локальная и адаптивная</small></span></button>
+      <div class="side-note"><span class="note-icon">ⓘ</span><div><b>Подсказка</b><p>Для проверки загрузи изображение с текстом или неравномерным освещением. Результат можно скачать.</p></div></div>
+      <div class="sidebar-footer">HTML · CSS · JavaScript<br>GitHub Pages ready</div>
+    </aside>
+    <section class="workspace">
+      <div class="page-heading">
+        <div><div class="eyebrow">IMAGE PROCESSING / 03</div><h2 id="pageTitle">Поэлементные операции</h2><p id="pageSubtitle">Преобразование яркости каждого пикселя и линейное контрастирование.</p></div>
+        <label class="upload-btn" for="fileInput">＋ <span>Загрузить изображение</span></label>
+        <input id="fileInput" type="file" accept="image/*" hidden>
+      </div>
+      <div class="sample-row"><span class="muted">ИЛИ ПОПРОБУЙ:</span><button class="sample-btn" id="sampleDocument">Тестовый документ</button><button class="sample-btn" id="sampleUneven">Неравномерный фон</button></div>
+      <div class="image-grid">
+        <article class="image-card">
+          <div class="card-head"><span>ИСХОДНОЕ ИЗОБРАЖЕНИЕ</span><span class="pill" id="originalTag">ORIGINAL</span></div>
+          <div class="canvas-wrap" id="originalWrap"><canvas id="originalCanvas" width="640" height="420"></canvas><div class="empty-state" id="emptyState"><div class="empty-symbol">↥</div><b>Добавь изображение</b><span>Перетащи файл сюда или нажми «Загрузить изображение»</span></div></div>
+          <div class="image-meta"><span id="imageName">Файл не выбран</span><span id="imageSize">—</span></div>
+        </article>
+        <article class="image-card result-card">
+          <div class="card-head"><span>РЕЗУЛЬТАТ ОБРАБОТКИ</span><span class="pill result-pill">PREVIEW</span></div>
+          <div class="canvas-wrap"><canvas id="resultCanvas" width="640" height="420"></canvas><div class="result-placeholder" id="resultPlaceholder">Результат появится здесь</div></div>
+          <div class="image-meta"><span id="resultLabel">Ожидание обработки</span><button class="download-btn" id="downloadBtn" disabled>↓ Скачать PNG</button></div>
+        </article>
+      </div>
+      <section class="control-panel">
+        <div class="panel-title"><div><div class="eyebrow">ПАРАМЕТРЫ</div><h3 id="controlTitle">Настройки преобразования</h3></div><button class="reset-btn" id="resetBtn">Сбросить</button></div>
+        <div id="pixelControls" class="controls-grid">
+          <div class="control-block"><label for="operation">Операция</label><select id="operation"><option value="contrast">Линейное контрастирование</option><option value="gray">Оттенки серого</option><option value="invert">Инверсия</option><option value="brightness">Яркость и контраст</option></select><p class="help">Выбери поэлементное преобразование.</p></div>
+          <div class="control-block range-block" id="brightnessBlock"><div class="range-label"><label for="brightness">Яркость</label><output id="brightnessOut">0</output></div><input id="brightness" type="range" min="-100" max="100" value="0"><div class="range-ends"><span>−100</span><span>+100</span></div></div>
+          <div class="control-block range-block" id="contrastBlock"><div class="range-label"><label for="contrast">Контраст</label><output id="contrastOut">1.0×</output></div><input id="contrast" type="range" min="0" max="300" value="100"><div class="range-ends"><span>0</span><span>3.0×</span></div></div>
+          <div class="control-block"><label for="stretch">Диапазон контрастирования</label><div class="two-inputs"><div><small>Нижняя граница</small><input id="lowCut" type="number" min="0" max="254" value="0"></div><div><small>Верхняя граница</small><input id="highCut" type="number" min="1" max="255" value="255"></div></div><p class="help">Пиксели между границами растягиваются на диапазон 0–255.</p></div>
+        </div>
+        <div id="thresholdControls" class="controls-grid" hidden>
+          <div class="control-block"><label for="thresholdMethod">Метод пороговой обработки</label><select id="thresholdMethod"><option value="mean">Локальный порог по среднему</option><option value="niblack">Локальный метод Ниблэка</option><option value="sauvola">Адаптивный метод Сауволы</option></select><p class="help" id="methodDescription">Порог каждого пикселя вычисляется по среднему значению яркости в окрестности.</p></div>
+          <div class="control-block range-block"><div class="range-label"><label for="windowSize">Размер окна</label><output id="windowOut">31 px</output></div><input id="windowSize" type="range" min="3" max="101" step="2" value="31"><div class="range-ends"><span>3 px</span><span>101 px</span></div></div>
+          <div class="control-block range-block" id="kBlock"><div class="range-label"><label for="kValue">Параметр k</label><output id="kOut">0.20</output></div><input id="kValue" type="range" min="-50" max="50" value="20"><div class="range-ends"><span>−0.50</span><span>+0.50</span></div><p class="help">Для Ниблэка: T = m + k · s.</p></div>
+          <div class="control-block range-block" id="rBlock"><div class="range-label"><label for="rValue">Динамический диапазон R</label><output id="rOut">128</output></div><input id="rValue" type="range" min="64" max="oup" value="128" disabled hidden><input id="rValue2" type="range" min="1" max="255" value="128"><div class="range-ends"><span>1</span><span>255</span></div><p class="help">Параметр нормализации стандартного отклонения в Сауволе.</p></div>
+          <div class="control-block range-block" id="sauvolaKBlock"><div class="range-label"><label for="sauvolaK">k Сауволы</label><output id="sauvolaKOut">0.20</output></div><input id="sauvolaK" type="range" min="0" max="100" value="20"><div class="range-ends"><span>0.00</span><span>1.00</span></div><p class="help">T = m · [1 + k · (s / R − 1)].</p></div>
+          <div class="control-block"><label for="foreground">Цвет объекта</label><select id="foreground"><option value="dark">Тёмный объект на светлом фоне</option><option value="light">Светлый объект на тёмном фоне</option></select><p class="help">Меняет правило классификации пикселя относительно порога.</p></div>
+        </div>
+        <div class="panel-bottom"><span class="engine-status"><span class="status-dot"></span><span id="statusText">Готово к обработке</span></span><button class="primary-btn" id="applyBtn">▶ Применить обработку</button></div>
+      </section>
+      <section class="stats-row">
+        <div class="stat-card"><span>РАЗМЕР</span><b id="statDimensions">—</b><small>ширина × высота</small></div>
+        <div class="stat-card"><span>ПИКСЕЛЕЙ</span><b id="statPixels">—</b><small>обрабатываемая область</small></div>
+        <div class="stat-card"><span>АЛГОРИТМ</span><b id="statAlgorithm">Не выбран</b><small>текущий метод</small></div>
+        <div class="stat-card"><span>ВРЕМЯ</span><b id="statTime">—</b><small>последняя обработка</small></div>
+      </section>
+      <footer class="footer">Лабораторная работа №3 · Вариант 11 <span>Обработка выполняется локально в браузере</span></footer>
+    </section>
+  </main>
+  <script src="algorithms.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
