@@ -1,3 +1,4 @@
+
 const imageInput = document.getElementById("imageInput");
 const previewImage = document.getElementById("previewImage");
 const imageInfo = document.getElementById("imageInfo");
@@ -13,6 +14,8 @@ const applyBrightnessButton = document.getElementById("applyBrightnessButton");
 const contrastSlider = document.getElementById("contrastSlider");
 const contrastValue = document.getElementById("contrastValue");
 const applyContrastButton = document.getElementById("applyContrastButton");
+
+const stretchButton = document.getElementById("stretchButton");
 
 const resultCanvas = document.getElementById("resultCanvas");
 const resultPlaceholder = document.getElementById("resultPlaceholder");
@@ -32,32 +35,14 @@ function setProcessingControlsEnabled(enabled) {
 
     contrastSlider.disabled = !enabled;
     applyContrastButton.disabled = !enabled;
+
+    stretchButton.disabled = !enabled;
 }
 
 function clearResult() {
     resultContext.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
     resultCanvas.hidden = true;
     resultPlaceholder.hidden = false;
-}
-
-function drawOriginalToCanvas() {
-    if (!originalImage) {
-        return;
-    }
-
-    resultCanvas.width = originalImage.naturalWidth;
-    resultCanvas.height = originalImage.naturalHeight;
-
-    resultContext.drawImage(
-        originalImage,
-        0,
-        0,
-        resultCanvas.width,
-        resultCanvas.height
-    );
-
-    resultCanvas.hidden = false;
-    resultPlaceholder.hidden = true;
 }
 
 function getOriginalImageData() {
@@ -76,11 +61,25 @@ function getOriginalImageData() {
     );
 }
 
+function displayImageData(imageData) {
+    resultCanvas.width = imageData.width;
+    resultCanvas.height = imageData.height;
+
+    resultContext.putImageData(imageData, 0, 0);
+
+    resultCanvas.hidden = false;
+    resultPlaceholder.hidden = true;
+}
+
 function showImageInfo(file, image) {
     const sizeInKB = (file.size / 1024).toFixed(1);
 
     imageInfo.textContent =
         `${file.name} · ${image.naturalWidth} × ${image.naturalHeight} px · ${sizeInKB} KB`;
+}
+
+function clamp(value) {
+    return Math.max(0, Math.min(255, Math.round(value)));
 }
 
 imageInput.addEventListener("change", () => {
@@ -150,12 +149,7 @@ grayscaleButton.addEventListener("click", () => {
         pixels[i + 2] = gray;
     }
 
-    resultCanvas.width = imageData.width;
-    resultCanvas.height = imageData.height;
-    resultContext.putImageData(imageData, 0, 0);
-
-    resultCanvas.hidden = false;
-    resultPlaceholder.hidden = true;
+    displayImageData(imageData);
 });
 
 invertButton.addEventListener("click", () => {
@@ -172,12 +166,7 @@ invertButton.addEventListener("click", () => {
         pixels[i + 2] = 255 - pixels[i + 2];
     }
 
-    resultCanvas.width = imageData.width;
-    resultCanvas.height = imageData.height;
-    resultContext.putImageData(imageData, 0, 0);
-
-    resultCanvas.hidden = false;
-    resultPlaceholder.hidden = true;
+    displayImageData(imageData);
 });
 
 brightnessSlider.addEventListener("input", () => {
@@ -200,12 +189,7 @@ applyBrightnessButton.addEventListener("click", () => {
         pixels[i + 2] = clamp(pixels[i + 2] + brightness);
     }
 
-    resultCanvas.width = imageData.width;
-    resultCanvas.height = imageData.height;
-    resultContext.putImageData(imageData, 0, 0);
-
-    resultCanvas.hidden = false;
-    resultPlaceholder.hidden = true;
+    displayImageData(imageData);
 });
 
 contrastSlider.addEventListener("input", () => {
@@ -219,8 +203,6 @@ applyContrastButton.addEventListener("click", () => {
     }
 
     const contrast = Number(contrastSlider.value);
-
-    // Map the slider value to a contrast factor.
     const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
 
     const imageData = getOriginalImageData();
@@ -232,12 +214,54 @@ applyContrastButton.addEventListener("click", () => {
         pixels[i + 2] = clamp(factor * (pixels[i + 2] - 128) + 128);
     }
 
-    resultCanvas.width = imageData.width;
-    resultCanvas.height = imageData.height;
-    resultContext.putImageData(imageData, 0, 0);
+    displayImageData(imageData);
+});
 
-    resultCanvas.hidden = false;
-    resultPlaceholder.hidden = true;
+stretchButton.addEventListener("click", () => {
+    if (!originalImage) {
+        return;
+    }
+
+    const imageData = getOriginalImageData();
+    const pixels = imageData.data;
+
+    let minIntensity = 255;
+    let maxIntensity = 0;
+
+    // Find the minimum and maximum grayscale intensity.
+    for (let i = 0; i < pixels.length; i += 4) {
+        const intensity = Math.round(
+            0.299 * pixels[i] +
+            0.587 * pixels[i + 1] +
+            0.114 * pixels[i + 2]
+        );
+
+        minIntensity = Math.min(minIntensity, intensity);
+        maxIntensity = Math.max(maxIntensity, intensity);
+    }
+
+    // Avoid division by zero when all pixels have the same intensity.
+    if (maxIntensity === minIntensity) {
+        displayImageData(imageData);
+        return;
+    }
+
+    const intensityRange = maxIntensity - minIntensity;
+
+    // Stretch each RGB channel using the intensity range.
+    for (let i = 0; i < pixels.length; i += 4) {
+        pixels[i] = clamp(
+            ((pixels[i] - minIntensity) * 255) / intensityRange
+        );
+        pixels[i + 1] = clamp(
+            ((pixels[i + 1] - minIntensity) * 255) / intensityRange
+        );
+        pixels[i + 2] = clamp(
+            ((pixels[i + 2] - minIntensity) * 255) / intensityRange
+        );
+    }
+
+    displayImageData(imageData);
 });
 
 resetButton.addEventListener("click", () => {
@@ -251,10 +275,6 @@ resetButton.addEventListener("click", () => {
     contrastValue.value = "0";
     contrastValue.textContent = "0";
 });
-
-function clamp(value) {
-    return Math.max(0, Math.min(255, Math.round(value)));
-}
 
 window.addEventListener("beforeunload", () => {
     if (currentImageUrl) {

@@ -1,3 +1,4 @@
+
 * {
     box-sizing: border-box;
 }
@@ -208,6 +209,13 @@ button:disabled {
 
 .adjustment-control button {
     width: 100%;
+}
+
+.control-description {
+    margin: 0;
+    color: #a7b0c2;
+    font-size: 13px;
+    line-height: 1.5;
 }
 
 .placeholder-text {
