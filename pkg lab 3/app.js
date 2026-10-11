@@ -27,6 +27,10 @@ const niblackK = document.getElementById("niblackK");
 const niblackKValue = document.getElementById("niblackKValue");
 const niblackButton = document.getElementById("niblackButton");
 
+const sauvolaK = document.getElementById("sauvolaK");
+const sauvolaKValue = document.getElementById("sauvolaKValue");
+const sauvolaButton = document.getElementById("sauvolaButton");
+
 const resultCanvas = document.getElementById("resultCanvas");
 const resultPlaceholder = document.getElementById("resultPlaceholder");
 const resultContext = resultCanvas.getContext("2d");
@@ -40,7 +44,8 @@ function setProcessingControlsEnabled(enabled) {
         brightnessSlider, applyBrightnessButton,
         contrastSlider, applyContrastButton, stretchButton,
         localMeanWindow, localMeanOffset, localMeanButton,
-        niblackK, niblackButton
+        niblackK, niblackButton,
+        sauvolaK, sauvolaButton
     ].forEach(control => {
         control.disabled = !enabled;
     });
@@ -118,6 +123,47 @@ function rectangleSum(integral, stride, x1, y1, x2, y2) {
         - integral[y1 * stride + x2]
         - integral[y2 * stride + x1]
         + integral[y1 * stride + x1];
+}
+
+function getLocalStatistics(gray, width, height, windowSize) {
+    const count = width * height;
+    const squared = new Float64Array(count);
+
+    for (let i = 0; i < count; i++) {
+        squared[i] = gray[i] * gray[i];
+    }
+
+    return {
+        sum: buildIntegralImage(gray, width, height),
+        squaredSum: buildIntegralImage(squared, width, height),
+        width,
+        height,
+        stride: width + 1,
+        radius: Math.floor(windowSize / 2)
+    };
+}
+
+function getWindowStatistics(stats, x, y) {
+    const { width, height, stride, radius, sum, squaredSum } = stats;
+
+    const x1 = Math.max(0, x - radius);
+    const y1 = Math.max(0, y - radius);
+    const x2 = Math.min(width, x + radius + 1);
+    const y2 = Math.min(height, y + radius + 1);
+
+    const area = (x2 - x1) * (y2 - y1);
+    const localSum = rectangleSum(sum, stride, x1, y1, x2, y2);
+    const localSquaredSum = rectangleSum(
+        squaredSum, stride, x1, y1, x2, y2
+    );
+
+    const mean = localSum / area;
+    const variance = Math.max(0, localSquaredSum / area - mean * mean);
+
+    return {
+        mean,
+        standardDeviation: Math.sqrt(variance)
+    };
 }
 
 function makeBinaryImage(gray, width, height, thresholdFunction) {
@@ -248,8 +294,14 @@ stretchButton.addEventListener("click", () => {
     if (!originalImage) return;
     const imageData = getOriginalImageData();
     const gray = getGrayscalePixels(imageData);
-    const minValue = Math.min(...gray);
-    const maxValue = Math.max(...gray);
+
+    let minValue = 255;
+    let maxValue = 0;
+
+    for (let i = 0; i < gray.length; i++) {
+        minValue = Math.min(minValue, gray[i]);
+        maxValue = Math.max(maxValue, gray[i]);
+    }
 
     if (maxValue === minValue) {
         displayImageData(imageData);
@@ -277,40 +329,6 @@ localMeanOffset.addEventListener("input", () => {
     localMeanOffsetValue.textContent = localMeanOffset.value;
 });
 
-function getLocalStatistics(gray, width, height, windowSize) {
-    const count = width * height;
-    const squared = new Float64Array(count);
-
-    for (let i = 0; i < count; i++) {
-        squared[i] = gray[i] * gray[i];
-    }
-
-    return {
-        sum: buildIntegralImage(gray, width, height),
-        squaredSum: buildIntegralImage(squared, width, height),
-        width,
-        height,
-        stride: width + 1,
-        radius: Math.floor(windowSize / 2)
-    };
-}
-
-function getWindowStatistics(stats, x, y) {
-    const { width, height, stride, radius, sum, squaredSum } = stats;
-    const x1 = Math.max(0, x - radius);
-    const y1 = Math.max(0, y - radius);
-    const x2 = Math.min(width, x + radius + 1);
-    const y2 = Math.min(height, y + radius + 1);
-
-    const area = (x2 - x1) * (y2 - y1);
-    const localSum = rectangleSum(sum, stride, x1, y1, x2, y2);
-    const localSquaredSum = rectangleSum(squaredSum, stride, x1, y1, x2, y2);
-    const mean = localSum / area;
-    const variance = Math.max(0, localSquaredSum / area - mean * mean);
-
-    return { mean, standardDeviation: Math.sqrt(variance) };
-}
-
 localMeanButton.addEventListener("click", () => {
     if (!originalImage) return;
 
@@ -330,8 +348,9 @@ localMeanButton.addEventListener("click", () => {
 });
 
 niblackK.addEventListener("input", () => {
-    niblackKValue.value = Number(niblackK.value).toFixed(2);
-    niblackKValue.textContent = Number(niblackK.value).toFixed(2);
+    const value = Number(niblackK.value).toFixed(2);
+    niblackKValue.value = value;
+    niblackKValue.textContent = value;
 });
 
 niblackButton.addEventListener("click", () => {
@@ -353,11 +372,43 @@ niblackButton.addEventListener("click", () => {
     displayImageData(output);
 });
 
+sauvolaK.addEventListener("input", () => {
+    const value = Number(sauvolaK.value).toFixed(2);
+    sauvolaKValue.value = value;
+    sauvolaKValue.textContent = value;
+});
+
+sauvolaButton.addEventListener("click", () => {
+    if (!originalImage) return;
+
+    const imageData = getOriginalImageData();
+    const { width, height } = imageData;
+    const gray = getGrayscalePixels(imageData);
+    const stats = getLocalStatistics(
+        gray, width, height, Number(localMeanWindow.value)
+    );
+
+    const k = Number(sauvolaK.value);
+    const R = 128;
+
+    const output = makeBinaryImage(gray, width, height, (x, y) => {
+        const local = getWindowStatistics(stats, x, y);
+
+        return local.mean * (
+            1 + k * (local.standardDeviation / R - 1)
+        );
+    });
+
+    displayImageData(output);
+});
+
 resetButton.addEventListener("click", () => {
     clearResult();
+
     brightnessSlider.value = "0";
     brightnessValue.value = "0";
     brightnessValue.textContent = "0";
+
     contrastSlider.value = "0";
     contrastValue.value = "0";
     contrastValue.textContent = "0";
