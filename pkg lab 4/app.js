@@ -5,6 +5,8 @@
   const ctx = canvas.getContext('2d');
   const message = document.getElementById('message');
   const ui = {
+    primitive: document.getElementById('primitive'), lineCoordinates: document.querySelector('.line-coordinates'), circleControls: document.getElementById('circleControls'),
+    cx: document.getElementById('cx'), cy: document.getElementById('cy'), radius: document.getElementById('radius'), octantDemo: document.getElementById('octantDemo'),
     x0: document.getElementById('x0'), y0: document.getElementById('y0'),
     x1: document.getElementById('x1'), y1: document.getElementById('y1'),
     draw: document.getElementById('drawButton'), algorithm: document.getElementById('algorithm'), zoomIn: document.getElementById('zoomIn'),
@@ -122,21 +124,58 @@
     }
   }
 
-  function showEndpoints() {
-    raster.clear();
-    const x0 = Number(ui.x0.value), y0 = Number(ui.y0.value);
-    const x1 = Number(ui.x1.value), y1 = Number(ui.y1.value);
-    const method = ui.algorithm.value;
-    const started = performance.now();
-    if (method === 'dda') plotDDA(raster, x0, y0, x1, y1);
-    else if (method === 'bresenham') plotBresenham(raster, x0, y0, x1, y1);
-    else plotStepwise(raster, x0, y0, x1, y1);
-    const elapsed = performance.now() - started;
-    render();
-    message.textContent = `${({ step: 'Пошаговый алгоритм', dda: 'ЦДА', bresenham: 'Брезенхем' })[method]}: растр построен за ${elapsed.toFixed(3)} мс. Алгоритм работает с целочисленными ячейками.`;
+  function plotBresenhamCircle(target, cx, cy, radius) {
+    let x = 0, y = Math.round(radius), decision = 3 - 2 * y;
+    while (y >= x) {
+      const points = [
+        [cx + x, cy + y], [cx - x, cy + y], [cx + x, cy - y], [cx - x, cy - y],
+        [cx + y, cy + x], [cx - y, cy + x], [cx + y, cy - x], [cx - y, cy - x]
+      ];
+      for (const [px, py] of points) target.setPixel(px, py);
+      if (decision < 0) decision += 4 * x + 6;
+      else { decision += 4 * (x - y) + 10; y--; }
+      x++;
+    }
   }
 
+  function showOctants() {
+    raster.clear();
+    const directions = [[15,5],[15,11],[5,15],[-5,15],[-15,11],[-15,5],[-15,-5],[-8,-15]];
+    for (const [x, y] of directions) plotBresenham(raster, 0, 0, x, y);
+    render();
+    message.textContent = 'Проверка восьми октантов: все отрезки растеризуются одной обобщённой целочисленной формулой.';
+  }
+
+  function showEndpoints() {
+    raster.clear();
+    const method = ui.algorithm.value;
+    const started = performance.now();
+    if (ui.primitive.value === 'circle') {
+      plotBresenhamCircle(raster, Number(ui.cx.value), Number(ui.cy.value), Number(ui.radius.value));
+    } else {
+      const x0 = Number(ui.x0.value), y0 = Number(ui.y0.value);
+      const x1 = Number(ui.x1.value), y1 = Number(ui.y1.value);
+      if (method === 'dda') plotDDA(raster, x0, y0, x1, y1);
+      else if (method === 'bresenham') plotBresenham(raster, x0, y0, x1, y1);
+      else plotStepwise(raster, x0, y0, x1, y1);
+    }
+    const elapsed = performance.now() - started;
+    render();
+    const objectName = ui.primitive.value === 'circle' ? 'Окружность Брезенхема' : ({ step: 'Пошаговый алгоритм', dda: 'ЦДА', bresenham: 'Брезенхем' })[method];
+    message.textContent = `${objectName}: растр построен за ${elapsed.toFixed(3)} мс. Координаты привязаны к центрам ячеек.`;
+  }
+
+  ui.primitive.addEventListener('change', () => {
+    const isCircle = ui.primitive.value === 'circle';
+    ui.lineCoordinates.classList.toggle('hidden', isCircle);
+    ui.circleControls.classList.toggle('hidden', !isCircle);
+    if (isCircle) ui.algorithm.disabled = true;
+    else ui.algorithm.disabled = false;
+    showEndpoints();
+  });
+
   ui.draw.addEventListener('click', showEndpoints);
+  ui.octantDemo.addEventListener('click', showOctants);
   ui.zoomIn.addEventListener('click', () => { cellSize = Math.min(24, cellSize + 2); ui.zoomValue.textContent = `${cellSize} px`; render(); });
   ui.zoomOut.addEventListener('click', () => { cellSize = Math.max(8, cellSize - 2); ui.zoomValue.textContent = `${cellSize} px`; render(); });
 

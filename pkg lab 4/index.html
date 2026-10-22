@@ -12,17 +12,26 @@
   <main>
     <section class="workspace">
       <div class="field">
+        <label for="primitive">Объект</label>
+        <select id="primitive"><option value="line">Отрезок</option><option value="circle">Окружность</option></select>
+      </div>
+      <div class="field">
         <label for="algorithm">Алгоритм</label>
         <select id="algorithm"><option value="step">Пошаговый</option><option value="dda">ЦДА (DDA)</option><option value="bresenham">Брезенхем</option></select>
       </div>
+      <div id="circleControls" class="circle-controls hidden">
+        <label>Центр X <input id="cx" type="number" value="0"></label>
+        <label>Центр Y <input id="cy" type="number" value="0"></label>
+        <label>Радиус <input id="radius" type="number" min="1" max="20" value="10"></label>
+      </div>
       <div class="canvas-tools"><button id="zoomOut" type="button">−</button><span id="zoomValue">16 px</span><button id="zoomIn" type="button">+</button></div>
-      <div class="coordinates">
+      <div class="coordinates line-coordinates">
         <label>x₀ <input id="x0" type="number" value="-12"></label>
         <label>y₀ <input id="y0" type="number" value="-5"></label>
         <label>x₁ <input id="x1" type="number" value="12"></label>
         <label>y₁ <input id="y1" type="number" value="8"></label>
       </div>
-      <button id="drawButton">Построить</button>
+      <div class="actions"><button id="drawButton">Построить</button><button id="octantDemo" class="secondary" type="button">Показать 8 октантов</button></div>
       <p id="message" role="status">Сетка координат: целые значения соответствуют центрам ячеек.</p>
       <canvas id="rasterCanvas" width="800" height="520" aria-label="Координатная сетка"></canvas>
     </section>

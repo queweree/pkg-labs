@@ -16,3 +16,8 @@ canvas { display: block; max-width: 100%; height: auto; border: 1px solid #d8d2c
 .canvas-tools { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
 .canvas-tools button { min-width: 36px; }
 #zoomValue { min-width: 55px; text-align: center; font-variant-numeric: tabular-nums; }
+.circle-controls { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.circle-controls label { display: grid; gap: 4px; font-size: 13px; }
+.hidden { display: none !important; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+button.secondary { background: #f2f0e8; border-color: #d5cebf; color: #4a5244; }
