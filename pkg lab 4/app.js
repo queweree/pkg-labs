@@ -7,7 +7,7 @@
   const ui = {
     x0: document.getElementById('x0'), y0: document.getElementById('y0'),
     x1: document.getElementById('x1'), y1: document.getElementById('y1'),
-    draw: document.getElementById('drawButton'), zoomIn: document.getElementById('zoomIn'),
+    draw: document.getElementById('drawButton'), algorithm: document.getElementById('algorithm'), zoomIn: document.getElementById('zoomIn'),
     zoomOut: document.getElementById('zoomOut'), zoomValue: document.getElementById('zoomValue')
   };
 
@@ -83,12 +83,43 @@
     }
   }
 
+  function plotStepwise(target, x0, y0, x1, y1) {
+    let steep = Math.abs(y1 - y0) > Math.abs(x1 - x0);
+    if (steep) { [x0, y0] = [y0, x0]; [x1, y1] = [y1, x1]; }
+    if (x0 > x1) { [x0, x1] = [x1, x0]; [y0, y1] = [y1, y0]; }
+    const dx = x1 - x0;
+    const slope = dx === 0 ? 0 : (y1 - y0) / dx;
+    for (let x = x0; x <= x1; x++) {
+      const y = Math.round(y0 + slope * (x - x0));
+      target.setPixel(steep ? y : x, steep ? x : y);
+    }
+  }
+
+  function plotDDA(target, x0, y0, x1, y1) {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+    if (steps === 0) { target.setPixel(x0, y0); return; }
+    const xStep = dx / steps;
+    const yStep = dy / steps;
+    let x = x0, y = y0;
+    for (let i = 0; i <= steps; i++) {
+      target.setPixel(Math.round(x), Math.round(y));
+      x += xStep; y += yStep;
+    }
+  }
+
   function showEndpoints() {
     raster.clear();
-    raster.setPixel(Number(ui.x0.value), Number(ui.y0.value));
-    raster.setPixel(Number(ui.x1.value), Number(ui.y1.value));
+    const x0 = Number(ui.x0.value), y0 = Number(ui.y0.value);
+    const x1 = Number(ui.x1.value), y1 = Number(ui.y1.value);
+    const method = ui.algorithm.value;
+    const started = performance.now();
+    if (method === 'dda') plotDDA(raster, x0, y0, x1, y1);
+    else plotStepwise(raster, x0, y0, x1, y1);
+    const elapsed = performance.now() - started;
     render();
-    message.textContent = 'Виртуальный растр заполнен двумя опорными точками. Одна координатная пара — одна ячейка массива.';
+    message.textContent = `${method === 'dda' ? 'ЦДА' : 'Пошаговый алгоритм'}: растр построен за ${elapsed.toFixed(3)} мс. Координаты привязаны к центрам ячеек.`;
   }
 
   ui.draw.addEventListener('click', showEndpoints);
