@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1e9">
+  <title>Дискретная графика</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar"><h1>Дискретная графика</h1></header>
+  <main>
+    <section class="workspace">
+      <div class="field">
+        <label for="algorithm">Алгоритм</label>
+        <select id="algorithm"><option value="step">Пошаговый</option></select>
+      </div>
+      <div class="coordinates">
+        <label>x₀ <input id="x0" type="number" value="-12"></label>
+        <label>y₀ <input id="y0" type="number" value="-5"></label>
+        <label>x₁ <input id="x1" type="number" value="12"></label>
+        <label>y₁ <input id="y1" type="number" value="8"></label>
+      </div>
+      <button id="drawButton">Построить</button>
+      <p id="message" role="status">Подготовка рабочей области.</p>
+      <canvas id="rasterCanvas" width="800" height="520" aria-label="Координатная сетка"></canvas>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
