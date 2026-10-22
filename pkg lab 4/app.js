@@ -109,6 +109,19 @@
     }
   }
 
+  function plotBresenham(target, x0, y0, x1, y1) {
+    const dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    const dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    let error = dx + dy;
+    for (;;) {
+      target.setPixel(x0, y0);
+      if (x0 === x1 && y0 === y1) break;
+      const doubled = 2 * error;
+      if (doubled >= dy) { error += dy; x0 += sx; }
+      if (doubled <= dx) { error += dx; y0 += sy; }
+    }
+  }
+
   function showEndpoints() {
     raster.clear();
     const x0 = Number(ui.x0.value), y0 = Number(ui.y0.value);
@@ -116,10 +129,11 @@
     const method = ui.algorithm.value;
     const started = performance.now();
     if (method === 'dda') plotDDA(raster, x0, y0, x1, y1);
+    else if (method === 'bresenham') plotBresenham(raster, x0, y0, x1, y1);
     else plotStepwise(raster, x0, y0, x1, y1);
     const elapsed = performance.now() - started;
     render();
-    message.textContent = `${method === 'dda' ? 'ЦДА' : 'Пошаговый алгоритм'}: растр построен за ${elapsed.toFixed(3)} мс. Координаты привязаны к центрам ячеек.`;
+    message.textContent = `${({ step: 'Пошаговый алгоритм', dda: 'ЦДА', bresenham: 'Брезенхем' })[method]}: растр построен за ${elapsed.toFixed(3)} мс. Алгоритм работает с целочисленными ячейками.`;
   }
 
   ui.draw.addEventListener('click', showEndpoints);
