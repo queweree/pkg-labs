@@ -7,6 +7,7 @@
   const ui = {
     primitive: document.getElementById('primitive'), lineCoordinates: document.querySelector('.line-coordinates'), circleControls: document.getElementById('circleControls'),
     cx: document.getElementById('cx'), cy: document.getElementById('cy'), radius: document.getElementById('radius'), octantDemo: document.getElementById('octantDemo'),
+    cursorReadout: document.getElementById('cursorReadout'), pixelMetric: document.getElementById('pixelMetric'), timeMetric: document.getElementById('timeMetric'), methodMetric: document.getElementById('methodMetric'), gridSizeLabel: document.getElementById('gridSizeLabel'),
     x0: document.getElementById('x0'), y0: document.getElementById('y0'),
     x1: document.getElementById('x1'), y1: document.getElementById('y1'),
     draw: document.getElementById('drawButton'), algorithm: document.getElementById('algorithm'), zoomIn: document.getElementById('zoomIn'),
@@ -31,6 +32,7 @@
       this.values[index] = Math.max(this.values[index], Math.max(0, Math.min(1, intensity)));
     }
     clear() { this.values.fill(0); }
+    count() { let total = 0; for (const value of this.values) if (value > 0) total++; return total; }
   }
 
   const raster = new VirtualGrid(GRID.width, GRID.height);
@@ -39,6 +41,7 @@
     canvas.width = GRID.width * cellSize + 1;
     canvas.height = GRID.height * cellSize + 1;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ui.gridSizeLabel.textContent = `${GRID.width} × ${GRID.height} ячеек`;
     ctx.fillStyle = '#fffdf8';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -143,6 +146,9 @@
     const directions = [[15,5],[15,11],[5,15],[-5,15],[-15,11],[-15,5],[-15,-5],[-8,-15]];
     for (const [x, y] of directions) plotBresenham(raster, 0, 0, x, y);
     render();
+    ui.pixelMetric.textContent = String(raster.count());
+    ui.methodMetric.textContent = 'Брезенхем · 8 октантов';
+    ui.timeMetric.textContent = '—';
     message.textContent = 'Проверка восьми октантов: все отрезки растеризуются одной обобщённой целочисленной формулой.';
   }
 
@@ -161,7 +167,10 @@
     }
     const elapsed = performance.now() - started;
     render();
+    ui.pixelMetric.textContent = String(raster.count());
+    ui.timeMetric.textContent = elapsed.toFixed(3);
     const objectName = ui.primitive.value === 'circle' ? 'Окружность Брезенхема' : ({ step: 'Пошаговый алгоритм', dda: 'ЦДА', bresenham: 'Брезенхем' })[method];
+    ui.methodMetric.textContent = objectName;
     message.textContent = `${objectName}: растр построен за ${elapsed.toFixed(3)} мс. Координаты привязаны к центрам ячеек.`;
   }
 
@@ -178,6 +187,29 @@
   ui.octantDemo.addEventListener('click', showOctants);
   ui.zoomIn.addEventListener('click', () => { cellSize = Math.min(24, cellSize + 2); ui.zoomValue.textContent = `${cellSize} px`; render(); });
   ui.zoomOut.addEventListener('click', () => { cellSize = Math.max(8, cellSize - 2); ui.zoomValue.textContent = `${cellSize} px`; render(); });
+
+  let nextPoint = 0;
+  canvas.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const px = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const py = (event.clientY - rect.top) * (canvas.height / rect.height);
+    const x = Math.floor(px / cellSize) + GRID.minX;
+    const y = GRID.maxY - Math.floor(py / cellSize);
+    if (x >= GRID.minX && x <= GRID.maxX && y >= GRID.minY && y <= GRID.maxY) {
+      ui.cursorReadout.textContent = `Координаты: (${x}, ${y})`;
+    } else ui.cursorReadout.textContent = 'Координаты: вне сетки';
+  });
+  canvas.addEventListener('mouseleave', () => { ui.cursorReadout.textContent = 'Координаты: —'; });
+  canvas.addEventListener('click', (event) => {
+    if (ui.primitive.value !== 'line') return;
+    const rect = canvas.getBoundingClientRect();
+    const px = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const py = (event.clientY - rect.top) * (canvas.height / rect.height);
+    const x = Math.max(GRID.minX, Math.min(GRID.maxX, Math.floor(px / cellSize) + GRID.minX));
+    const y = Math.max(GRID.minY, Math.min(GRID.maxY, GRID.maxY - Math.floor(py / cellSize)));
+    if (nextPoint === 0) { ui.x0.value = x; ui.y0.value = y; nextPoint = 1; message.textContent = `Начало отрезка задано: (${x}, ${y}). Выберите вторую точку.`; }
+    else { ui.x1.value = x; ui.y1.value = y; nextPoint = 0; message.textContent = `Конец отрезка задан: (${x}, ${y}). Нажмите «Построить».`; }
+  });
 
   showEndpoints();
 })();
