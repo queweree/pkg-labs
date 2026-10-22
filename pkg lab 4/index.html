@@ -31,7 +31,7 @@
         <label>x₁ <input id="x1" type="number" value="12"></label>
         <label>y₁ <input id="y1" type="number" value="8"></label>
       </div>
-      <div class="actions"><button id="drawButton">Построить</button><button id="octantDemo" class="secondary" type="button">Показать 8 октантов</button></div>
+      <div class="actions"><button id="drawButton">Построить</button><button id="clearRaster" class="secondary" type="button">Очистить</button><button id="downloadImage" class="secondary" type="button">Экспорт PNG</button><button id="octantDemo" class="secondary" type="button">Показать 8 октантов</button></div>
       <p id="message" role="status">Сетка координат: целые значения соответствуют центрам ячеек.</p>
       <div class="canvas-meta"><span id="cursorReadout">Координаты: —</span><span id="gridSizeLabel">41 × 31 ячейка</span></div>
       <canvas id="rasterCanvas" width="800" height="520" aria-label="Координатная сетка"></canvas>
@@ -40,6 +40,11 @@
         <article><span>Время вычисления</span><strong><b id="timeMetric">—</b> мс</strong></article>
         <article><span>Текущий метод</span><strong id="methodMetric">Брезенхем</strong></article>
       </div>
+      <section class="trace-panel" aria-label="Пошаговая трассировка">
+        <div class="trace-header"><h2>Трассировка пикселей</h2><span id="traceCount">0 точек</span></div>
+        <p>Таблица показывает уникальные ячейки, записанные алгоритмом в виртуальный растр.</p>
+        <div class="trace-wrap"><table><thead><tr><th>№</th><th>x</th><th>y</th><th>Интенсивность</th></tr></thead><tbody id="traceTableBody"></tbody></table></div>
+      </section>
     </section>
   </main>
   <script src="app.js"></script>

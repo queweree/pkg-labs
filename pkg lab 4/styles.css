@@ -27,3 +27,15 @@ button.secondary { background: #f2f0e8; border-color: #d5cebf; color: #4a5244; }
 .metrics span { color: #6e7369; font-size: 12px; }
 .metrics strong { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 @media (max-width: 600px) { .metrics { grid-template-columns: 1fr; } .canvas-meta { font-size: 11px; } }
+.actions { margin-bottom: 10px; }
+.trace-panel { margin-top: 20px; border: 1px solid #ded8cb; background: #fffdf8; border-radius: 10px; padding: 16px; }
+.trace-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.trace-header h2 { margin: 0; font-size: 17px; }
+.trace-header span { color: #607750; font-size: 12px; }
+.trace-panel p { color: #6e7369; font-size: 12px; margin: 7px 0 12px; }
+.trace-wrap { max-height: 240px; overflow: auto; border: 1px solid #e0dacd; border-radius: 7px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+th, td { padding: 7px 10px; border-bottom: 1px solid #e8e3d8; }
+th { position: sticky; top: 0; background: #eeece3; color: #5f665a; }
+td { font-variant-numeric: tabular-nums; }
+@media(max-width:600px) { .trace-panel { padding: 12px; } .trace-header h2 { font-size: 15px; } }

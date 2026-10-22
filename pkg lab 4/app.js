@@ -7,6 +7,7 @@
   const ui = {
     primitive: document.getElementById('primitive'), lineCoordinates: document.querySelector('.line-coordinates'), circleControls: document.getElementById('circleControls'),
     cx: document.getElementById('cx'), cy: document.getElementById('cy'), radius: document.getElementById('radius'), octantDemo: document.getElementById('octantDemo'),
+    clearRaster: document.getElementById('clearRaster'), downloadImage: document.getElementById('downloadImage'), traceCount: document.getElementById('traceCount'), traceTableBody: document.getElementById('traceTableBody'),
     cursorReadout: document.getElementById('cursorReadout'), pixelMetric: document.getElementById('pixelMetric'), timeMetric: document.getElementById('timeMetric'), methodMetric: document.getElementById('methodMetric'), gridSizeLabel: document.getElementById('gridSizeLabel'),
     x0: document.getElementById('x0'), y0: document.getElementById('y0'),
     x1: document.getElementById('x1'), y1: document.getElementById('y1'),
@@ -22,6 +23,7 @@
       this.width = width;
       this.height = height;
       this.values = new Float32Array(width * height);
+      this.trace = [];
     }
     setPixel(x, y, intensity = 1) {
       x = Math.round(x); y = Math.round(y);
@@ -29,9 +31,11 @@
       const row = GRID.maxY - y;
       if (col < 0 || col >= this.width || row < 0 || row >= this.height) return;
       const index = row * this.width + col;
-      this.values[index] = Math.max(this.values[index], Math.max(0, Math.min(1, intensity)));
+      const value = Math.max(0, Math.min(1, intensity));
+      if (this.values[index] === 0 && value > 0) this.trace.push({ x, y, intensity: value });
+      this.values[index] = Math.max(this.values[index], value);
     }
-    clear() { this.values.fill(0); }
+    clear() { this.values.fill(0); this.trace = []; }
     count() { let total = 0; for (const value of this.values) if (value > 0) total++; return total; }
   }
 
@@ -147,6 +151,7 @@
     for (const [x, y] of directions) plotBresenham(raster, 0, 0, x, y);
     render();
     ui.pixelMetric.textContent = String(raster.count());
+    updateTrace();
     ui.methodMetric.textContent = 'Брезенхем · 8 октантов';
     ui.timeMetric.textContent = '—';
     message.textContent = 'Проверка восьми октантов: все отрезки растеризуются одной обобщённой целочисленной формулой.';
@@ -167,6 +172,7 @@
     }
     const elapsed = performance.now() - started;
     render();
+    updateTrace();
     ui.pixelMetric.textContent = String(raster.count());
     ui.timeMetric.textContent = elapsed.toFixed(3);
     const objectName = ui.primitive.value === 'circle' ? 'Окружность Брезенхема' : ({ step: 'Пошаговый алгоритм', dda: 'ЦДА', bresenham: 'Брезенхем' })[method];
@@ -183,8 +189,50 @@
     showEndpoints();
   });
 
+
+  function updateTrace() {
+    const shown = raster.trace.slice(0, 100);
+    ui.traceCount.textContent = `${raster.trace.length} точек`;
+    ui.traceTableBody.replaceChildren();
+    shown.forEach((point, index) => {
+      const row = document.createElement('tr');
+      [index + 1, point.x, point.y, point.intensity.toFixed(2)].forEach((value) => {
+        const cell = document.createElement('td');
+        cell.textContent = String(value);
+        row.appendChild(cell);
+      });
+      ui.traceTableBody.appendChild(row);
+    });
+    if (raster.trace.length > shown.length) {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 4;
+      cell.textContent = `Показаны первые ${shown.length} точек из ${raster.trace.length}.`;
+      row.appendChild(cell);
+      ui.traceTableBody.appendChild(row);
+    }
+  }
+
+  function clearRaster() {
+    raster.clear();
+    render();
+    updateTrace();
+    ui.pixelMetric.textContent = '0';
+    ui.timeMetric.textContent = '—';
+    message.textContent = 'Виртуальный растр очищен.';
+  }
+
+  function downloadPNG() {
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = 'raster-grid.png';
+    link.click();
+  }
+
   ui.draw.addEventListener('click', showEndpoints);
   ui.octantDemo.addEventListener('click', showOctants);
+  ui.clearRaster.addEventListener('click', clearRaster);
+  ui.downloadImage.addEventListener('click', downloadPNG);
   ui.zoomIn.addEventListener('click', () => { cellSize = Math.min(24, cellSize + 2); ui.zoomValue.textContent = `${cellSize} px`; render(); });
   ui.zoomOut.addEventListener('click', () => { cellSize = Math.max(8, cellSize - 2); ui.zoomValue.textContent = `${cellSize} px`; render(); });
 
