@@ -13,23 +13,25 @@
     x1: document.getElementById('x1'), y1: document.getElementById('y1'),
     qx0: document.getElementById('qx0'), qy0: document.getElementById('qy0'), qxc: document.getElementById('qxc'), qyc: document.getElementById('qyc'), qx1: document.getElementById('qx1'), qy1: document.getElementById('qy1'),
     draw: document.getElementById('drawButton'), algorithm: document.getElementById('algorithm'), zoomIn: document.getElementById('zoomIn'),
-    zoomOut: document.getElementById('zoomOut'), zoomValue: document.getElementById('zoomValue')
+    zoomOut: document.getElementById('zoomOut'), zoomValue: document.getElementById('zoomValue'),
+    runBenchmark: document.getElementById('runBenchmark'), benchmarkStatus: document.getElementById('benchmarkStatus'), benchmarkProgress: document.getElementById('benchmarkProgress'),
+    lineBenchStat: document.getElementById('lineBenchStat'), circleBenchStat: document.getElementById('circleBenchStat'), totalBenchStat: document.getElementById('totalBenchStat')
   };
 
   const GRID = { width: 41, height: 31, minX: -20, maxX: 20, minY: -15, maxY: 15 };
   let cellSize = 16;
 
   class VirtualGrid {
-    constructor(width, height) {
-      this.width = width;
-      this.height = height;
+    constructor(width, height, minX = GRID.minX, maxY = GRID.maxY, minY = GRID.minY) {
+      this.width = width; this.height = height;
+      this.minX = minX; this.maxY = maxY; this.minY = minY;
       this.values = new Float32Array(width * height);
       this.trace = [];
     }
     setPixel(x, y, intensity = 1) {
       x = Math.round(x); y = Math.round(y);
-      const col = x - GRID.minX;
-      const row = GRID.maxY - y;
+      const col = x - this.minX;
+      const row = this.maxY - y;
       if (col < 0 || col >= this.width || row < 0 || row >= this.height) return;
       const index = row * this.width + col;
       const value = Math.max(0, Math.min(1, intensity));
@@ -342,6 +344,75 @@
     link.download = 'raster-grid.png';
     link.click();
   }
+
+
+  function seededRandom(seed) {
+    let state = seed >>> 0;
+    return () => { state = (1664525 * state + 1013904223) >>> 0; return state / 4294967296; };
+  }
+  const benchmarkState = { results: null, running: false };
+  const nextFrame = () => new Promise(resolve => setTimeout(resolve, 0));
+  const formatMs = value => `${value.toFixed(value < 10 ? 3 : 1)} мс`;
+  async function runStressBenchmark() {
+    if (benchmarkState.running) return;
+    benchmarkState.running = true;
+    ui.runBenchmark.disabled = true;
+    ui.benchmarkStatus.textContent = 'Подготовка тестовых данных…';
+    ui.benchmarkProgress.style.width = '0%';
+    try {
+      const randomLine = seededRandom(20261024), randomCircle = seededRandom(20261025);
+      // Dataset generation intentionally happens outside the measured loops.
+      const lines = new Array(100000);
+      const octantVectors = [[1,1],[1,1],[-1,1],[-1,1],[-1,-1],[-1,-1],[1,-1],[1,-1]];
+      for (let i=0;i<lines.length;i++) {
+        // A sun-like test set: evenly distribute line directions over the eight octants.
+        const octant = i % 8, major = 4 + Math.floor(randomLine()*180), minor = Math.floor(randomLine()*(major+1));
+        const vectors = [[major,minor],[minor,major],[-minor,major],[-major,minor],[-major,-minor],[-minor,-major],[minor,-major],[major,-minor]];
+        const [dx,dy] = vectors[octant];
+        const x0=256, y0=256;
+        lines[i]=[x0,y0,x0+dx,y0+dy];
+      }
+      const circles = new Array(50000);
+      for (let i=0;i<circles.length;i++) {
+        const radius = 2 + Math.floor(randomCircle()*36);
+        circles[i]=[radius+Math.floor(randomCircle()*(512-2*radius)),radius+Math.floor(randomCircle()*(512-2*radius)),radius];
+      }
+      const target = new VirtualGrid(512,512,0,511,0);
+      const lineFunction = ({step:plotStepwise, dda:plotDDA, bresenham:plotBresenham, wu:plotWu})[ui.algorithm.value] || plotBresenham;
+      const lineSeries=[], circleSeries=[];
+      let lineTime=0, circleTime=0;
+      for (let start=0;start<lines.length;start+=5000) {
+        const stop=Math.min(start+5000,lines.length), t0=performance.now();
+        for (let i=start;i<stop;i++) lineFunction(target,...lines[i]);
+        lineTime += performance.now()-t0;
+        if (stop%10000===0 || stop===lines.length) lineSeries.push({x:stop,y:lineTime});
+        ui.benchmarkProgress.style.width=`${stop/100000*60}%`;
+        ui.benchmarkStatus.textContent=`Отрезки: ${stop.toLocaleString('ru-RU')} / 100 000`;
+        await nextFrame();
+      }
+      for (let start=0;start<circles.length;start+=2500) {
+        const stop=Math.min(start+2500,circles.length), t0=performance.now();
+        for (let i=start;i<stop;i++) plotBresenhamCircle(target,...circles[i]);
+        circleTime += performance.now()-t0;
+        if (stop%5000===0 || stop===circles.length) circleSeries.push({x:stop,y:circleTime});
+        ui.benchmarkProgress.style.width=`${60+stop/50000*40}%`;
+        ui.benchmarkStatus.textContent=`Окружности: ${stop.toLocaleString('ru-RU')} / 50 000`;
+        await nextFrame();
+      }
+      benchmarkState.results={method:ui.algorithm.value,lineTime,circleTime,totalTime:lineTime+circleTime,lineSeries,circleSeries};
+      ui.lineBenchStat.textContent=formatMs(lineTime);
+      ui.circleBenchStat.textContent=formatMs(circleTime);
+      ui.totalBenchStat.textContent=formatMs(lineTime+circleTime);
+      ui.benchmarkProgress.style.width='100%';
+      ui.benchmarkStatus.textContent='Тест завершён. Время измерено отдельно от подготовки данных и обновления интерфейса.';
+    } catch (error) {
+      console.error(error); ui.benchmarkStatus.textContent='Ошибка во время теста: '+error.message;
+    } finally {
+      benchmarkState.running=false; ui.runBenchmark.disabled=false;
+    }
+  }
+
+  ui.runBenchmark.addEventListener("click", runStressBenchmark);
 
   ui.draw.addEventListener('click', showEndpoints);
   ui.octantDemo.addEventListener('click', showOctants);

@@ -45,6 +45,13 @@
         <article><span>Время вычисления</span><strong><b id="timeMetric">—</b> мс</strong></article>
         <article><span>Текущий метод</span><strong id="methodMetric">Брезенхем</strong></article>
       </div>
+    <section class="benchmark-panel" aria-labelledby="benchmarkTitle">
+      <div class="benchmark-head"><div><h2 id="benchmarkTitle">Стресс-тест виртуального растра</h2><p>100 000 случайных отрезков и 50 000 окружностей. В замер входит только растеризация в числовой массив.</p></div><button id="runBenchmark" type="button">Запустить тест</button></div>
+      <div class="benchmark-progress"><span id="benchmarkProgress"></span></div>
+      <p id="benchmarkStatus" role="status">Ожидание запуска</p>
+      <div class="benchmark-stats"><article><span>Отрезки · 100 000</span><strong id="lineBenchStat">—</strong></article><article><span>Окружности · 50 000</span><strong id="circleBenchStat">—</strong></article><article><span>Общее время ядра</span><strong id="totalBenchStat">—</strong></article></div>
+    </section>
+
       <section class="trace-panel" aria-label="Пошаговая трассировка">
         <div class="trace-header"><h2>Трассировка пикселей</h2><span id="traceCount">0 точек</span></div>
         <p>Таблица показывает уникальные ячейки, записанные алгоритмом в виртуальный растр.</p>
