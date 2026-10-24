@@ -131,6 +131,41 @@
     }
   }
 
+
+  // Xiaolin Wu's line algorithm: fractional position is split between two neighbouring pixels.
+  function fractionalPart(value) { return value - Math.floor(value); }
+  function reverseFraction(value) { return 1 - fractionalPart(value); }
+
+  function plotWu(target, x0, y0, x1, y1) {
+    if (x0 === x1 && y0 === y1) { target.setPixel(x0, y0, 1); return; }
+    let steep = Math.abs(y1 - y0) > Math.abs(x1 - x0);
+    if (steep) { [x0, y0] = [y0, x0]; [x1, y1] = [y1, x1]; }
+    if (x0 > x1) { [x0, x1] = [x1, x0]; [y0, y1] = [y1, y0]; }
+    const dx = x1 - x0, dy = y1 - y0;
+    const gradient = dx === 0 ? 0 : dy / dx;
+    const plot = (x, y, intensity) => target.setPixel(steep ? y : x, steep ? x : y, intensity);
+
+    let xEnd = Math.round(x0);
+    let yEnd = y0 + gradient * (xEnd - x0);
+    let xGap = reverseFraction(x0 + 0.5);
+    let xPixel1 = xEnd, yPixel1 = Math.floor(yEnd);
+    plot(xPixel1, yPixel1, reverseFraction(yEnd) * xGap);
+    plot(xPixel1, yPixel1 + 1, fractionalPart(yEnd) * xGap);
+    let interY = yEnd + gradient;
+
+    xEnd = Math.round(x1);
+    yEnd = y1 + gradient * (xEnd - x1);
+    xGap = fractionalPart(x1 + 0.5);
+    const xPixel2 = xEnd, yPixel2 = Math.floor(yEnd);
+    for (let x = xPixel1 + 1; x < xPixel2; x++) {
+      plot(x, Math.floor(interY), reverseFraction(interY));
+      plot(x, Math.floor(interY) + 1, fractionalPart(interY));
+      interY += gradient;
+    }
+    plot(xPixel2, yPixel2, reverseFraction(yEnd) * xGap);
+    plot(xPixel2, yPixel2 + 1, fractionalPart(yEnd) * xGap);
+  }
+
   function plotBresenhamCircle(target, cx, cy, radius) {
     let x = 0, y = Math.round(radius), decision = 3 - 2 * y;
     while (y >= x) {
@@ -168,6 +203,7 @@
       const x1 = Number(ui.x1.value), y1 = Number(ui.y1.value);
       if (method === 'dda') plotDDA(raster, x0, y0, x1, y1);
       else if (method === 'bresenham') plotBresenham(raster, x0, y0, x1, y1);
+      else if (method === 'wu') plotWu(raster, x0, y0, x1, y1);
       else plotStepwise(raster, x0, y0, x1, y1);
     }
     const elapsed = performance.now() - started;
@@ -175,7 +211,7 @@
     updateTrace();
     ui.pixelMetric.textContent = String(raster.count());
     ui.timeMetric.textContent = elapsed.toFixed(3);
-    const objectName = ui.primitive.value === 'circle' ? 'Окружность Брезенхема' : ({ step: 'Пошаговый алгоритм', dda: 'ЦДА', bresenham: 'Брезенхем' })[method];
+    const objectName = ui.primitive.value === 'circle' ? 'Окружность Брезенхема' : ({ step: 'Пошаговый алгоритм', dda: 'ЦДА', bresenham: 'Брезенхем', wu: 'Ву · сглаживание' })[method];
     ui.methodMetric.textContent = objectName;
     message.textContent = `${objectName}: растр построен за ${elapsed.toFixed(3)} мс. Координаты привязаны к центрам ячеек.`;
   }
