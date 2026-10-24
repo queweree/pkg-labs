@@ -52,6 +52,11 @@
       <div class="benchmark-stats"><article><span>Отрезки · 100 000</span><strong id="lineBenchStat">—</strong></article><article><span>Окружности · 50 000</span><strong id="circleBenchStat">—</strong></article><article><span>Общее время ядра</span><strong id="totalBenchStat">—</strong></article></div>
     </section>
 
+    <section id="benchmarkCharts" class="charts-panel" aria-label="Графики производительности">
+      <div class="chart-block"><h2>Время и количество примитивов</h2><p>Накопленное время работы ядра в зависимости от обработанных примитивов.</p><canvas id="countChart" width="800" height="300" aria-label="График времени от количества примитивов"></canvas></div>
+      <div class="chart-block"><h2>Время и длина отрезка</h2><p>Время растеризации 1 000 отрезков выбранным алгоритмом для разных длин.</p><canvas id="lengthChart" width="800" height="300" aria-label="График времени от длины отрезка"></canvas></div>
+    </section>
+
       <section class="trace-panel" aria-label="Пошаговая трассировка">
         <div class="trace-header"><h2>Трассировка пикселей</h2><span id="traceCount">0 точек</span></div>
         <p>Таблица показывает уникальные ячейки, записанные алгоритмом в виртуальный растр.</p>

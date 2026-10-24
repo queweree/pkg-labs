@@ -15,7 +15,8 @@
     draw: document.getElementById('drawButton'), algorithm: document.getElementById('algorithm'), zoomIn: document.getElementById('zoomIn'),
     zoomOut: document.getElementById('zoomOut'), zoomValue: document.getElementById('zoomValue'),
     runBenchmark: document.getElementById('runBenchmark'), benchmarkStatus: document.getElementById('benchmarkStatus'), benchmarkProgress: document.getElementById('benchmarkProgress'),
-    lineBenchStat: document.getElementById('lineBenchStat'), circleBenchStat: document.getElementById('circleBenchStat'), totalBenchStat: document.getElementById('totalBenchStat')
+    lineBenchStat: document.getElementById('lineBenchStat'), circleBenchStat: document.getElementById('circleBenchStat'), totalBenchStat: document.getElementById('totalBenchStat'),
+    countChart: document.getElementById('countChart'), lengthChart: document.getElementById('lengthChart')
   };
 
   const GRID = { width: 41, height: 31, minX: -20, maxX: 20, minY: -15, maxY: 15 };
@@ -346,6 +347,40 @@
   }
 
 
+
+  function drawLineChart(canvas, series, options={}) {
+    const ctx=canvas.getContext('2d'), W=canvas.width, H=canvas.height;
+    const pad={left:58,right:18,top:20,bottom:48};
+    ctx.clearRect(0,0,W,H); ctx.fillStyle='#fffdf8'; ctx.fillRect(0,0,W,H);
+    const plotW=W-pad.left-pad.right, plotH=H-pad.top-pad.bottom;
+    const all=series.flatMap(s=>s.points); if (!all.length) return;
+    const maxX=Math.max(1,...all.map(p=>p.x)), maxY=Math.max(1,...all.map(p=>p.y))*1.12;
+    ctx.font='12px system-ui'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    for(let i=0;i<=4;i++){const y=pad.top+plotH*i/4;ctx.strokeStyle='#e8e3d8';ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(W-pad.right,y);ctx.stroke();ctx.fillStyle='#6e7369';ctx.fillText((maxY*(4-i)/4).toFixed(0),pad.left-8,y);}
+    for(let i=0;i<=4;i++){const x=pad.left+plotW*i/4;ctx.strokeStyle='#f0ece3';ctx.beginPath();ctx.moveTo(x,pad.top);ctx.lineTo(x,H-pad.bottom);ctx.stroke();ctx.fillStyle='#6e7369';ctx.textAlign='center';ctx.fillText(Math.round(maxX*i/4).toLocaleString('ru-RU'),x,H-pad.bottom+14);}
+    const colors=['#647c52','#b76d4e','#7d8d9b'];
+    series.forEach((s,si)=>{ctx.beginPath();ctx.strokeStyle=colors[si%colors.length];ctx.lineWidth=2.4;s.points.forEach((p,i)=>{const x=pad.left+p.x/maxX*plotW,y=H-pad.bottom-p.y/maxY*plotH;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();});
+    ctx.fillStyle='#4a5244';ctx.textAlign='center';ctx.fillText(options.xLabel||'Количество примитивов',pad.left+plotW/2,H-12);
+    ctx.save();ctx.translate(16,pad.top+plotH/2);ctx.rotate(-Math.PI/2);ctx.fillText(options.yLabel||'Время, мс',0,0);ctx.restore();
+    ctx.textAlign='left';let lx=pad.left;series.forEach((s,i)=>{ctx.fillStyle=colors[i%colors.length];ctx.fillRect(lx,pad.top,14,3);ctx.fillStyle='#4a5244';ctx.fillText(s.name,lx+19,pad.top+2);lx+=ctx.measureText(s.name).width+42;});
+  }
+  async function measureLengthSeries(method) {
+    const lengths=[16,32,64,96,128,192,256], count=1000, target=new VirtualGrid(512,512,0,511,0);
+    const fn=({step:plotStepwise,dda:plotDDA,bresenham:plotBresenham,wu:plotWu})[method]||plotBresenham;
+    const result=[];
+    for(const length of lengths){
+      const lines=Array.from({length:count},(_,i)=>{const x=20+(i%100)*2,y=30+Math.floor(i/100)*4;return [x,y,Math.min(510,x+length),Math.min(510,y+Math.round(length*.37))];});
+      const start=performance.now();for(const line of lines)fn(target,...line);const elapsed=performance.now()-start;
+      result.push({x:length,y:elapsed});await nextFrame();
+    }
+    return result;
+  }
+  function updateBenchmarkCharts(results) {
+    if(!results)return;
+    drawLineChart(ui.countChart,[{name:'Отрезки',points:results.lineSeries},{name:'Окружности',points:results.circleSeries}],{xLabel:'Обработано примитивов',yLabel:'Накопленное время, мс'});
+    drawLineChart(ui.lengthChart,[{name:'Время обработки',points:results.lengthSeries||[]}],{xLabel:'Длина отрезка, пикселей',yLabel:'Время на 1 000 линий, мс'});
+  }
+
   function seededRandom(seed) {
     let state = seed >>> 0;
     return () => { state = (1664525 * state + 1013904223) >>> 0; return state / 4294967296; };
@@ -403,6 +438,9 @@
       ui.lineBenchStat.textContent=formatMs(lineTime);
       ui.circleBenchStat.textContent=formatMs(circleTime);
       ui.totalBenchStat.textContent=formatMs(lineTime+circleTime);
+      ui.benchmarkStatus.textContent='Измерение зависимости от длины отрезка…';
+      benchmarkState.results.lengthSeries = await measureLengthSeries(ui.algorithm.value);
+      updateBenchmarkCharts(benchmarkState.results);
       ui.benchmarkProgress.style.width='100%';
       ui.benchmarkStatus.textContent='Тест завершён. Время измерено отдельно от подготовки данных и обновления интерфейса.';
     } catch (error) {
