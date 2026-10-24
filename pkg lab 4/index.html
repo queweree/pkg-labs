@@ -13,7 +13,7 @@
     <section class="workspace">
       <div class="field">
         <label for="primitive">Объект</label>
-        <select id="primitive"><option value="line">Отрезок</option><option value="circle">Окружность</option></select>
+        <select id="primitive"><option value="line">Отрезок</option><option value="circle">Окружность</option><option value="curve">Дуга Кастла–Питвея</option></select>
       </div>
       <div class="field">
         <label for="algorithm">Алгоритм</label>
@@ -23,6 +23,11 @@
         <label>Центр X <input id="cx" type="number" value="0"></label>
         <label>Центр Y <input id="cy" type="number" value="0"></label>
         <label>Радиус <input id="radius" type="number" min="1" max="20" value="10"></label>
+      </div>
+      <div id="curveControls" class="curve-controls hidden">
+        <label>x₀ <input id="qx0" type="number" value="-16"></label><label>y₀ <input id="qy0" type="number" value="-7"></label>
+        <label>xс <input id="qxc" type="number" value="0"></label><label>yс <input id="qyc" type="number" value="12"></label>
+        <label>x₁ <input id="qx1" type="number" value="16"></label><label>y₁ <input id="qy1" type="number" value="-6"></label>
       </div>
       <div class="canvas-tools"><button id="zoomOut" type="button">−</button><span id="zoomValue">16 px</span><button id="zoomIn" type="button">+</button></div>
       <div class="coordinates line-coordinates">

@@ -5,12 +5,13 @@
   const ctx = canvas.getContext('2d');
   const message = document.getElementById('message');
   const ui = {
-    primitive: document.getElementById('primitive'), lineCoordinates: document.querySelector('.line-coordinates'), circleControls: document.getElementById('circleControls'),
+    primitive: document.getElementById('primitive'), lineCoordinates: document.querySelector('.line-coordinates'), circleControls: document.getElementById('circleControls'), curveControls: document.getElementById('curveControls'),
     cx: document.getElementById('cx'), cy: document.getElementById('cy'), radius: document.getElementById('radius'), octantDemo: document.getElementById('octantDemo'),
     clearRaster: document.getElementById('clearRaster'), downloadImage: document.getElementById('downloadImage'), traceCount: document.getElementById('traceCount'), traceTableBody: document.getElementById('traceTableBody'),
     cursorReadout: document.getElementById('cursorReadout'), pixelMetric: document.getElementById('pixelMetric'), timeMetric: document.getElementById('timeMetric'), methodMetric: document.getElementById('methodMetric'), gridSizeLabel: document.getElementById('gridSizeLabel'),
     x0: document.getElementById('x0'), y0: document.getElementById('y0'),
     x1: document.getElementById('x1'), y1: document.getElementById('y1'),
+    qx0: document.getElementById('qx0'), qy0: document.getElementById('qy0'), qxc: document.getElementById('qxc'), qyc: document.getElementById('qyc'), qx1: document.getElementById('qx1'), qy1: document.getElementById('qy1'),
     draw: document.getElementById('drawButton'), algorithm: document.getElementById('algorithm'), zoomIn: document.getElementById('zoomIn'),
     zoomOut: document.getElementById('zoomOut'), zoomValue: document.getElementById('zoomValue')
   };
@@ -180,6 +181,80 @@
     }
   }
 
+
+  function getOctant(dfdx, dfdy) {
+    let oct = 0;
+    if (dfdx < 0) { oct = 7; dfdx = -dfdx; }
+    if (dfdy > 0) { oct ^= 3; dfdy = -dfdy; }
+    if (dfdx > -dfdy) oct ^= 1;
+    return oct + 1;
+  }
+  function truncDiv(value, divisor) { return Math.trunc(value / divisor); }
+
+  // Integer finite-difference conic tracker based on Castle–Pitteway's approach.
+  function pittewayConic(target, xs, ys, xe, ye, A, B, C, D, E, F) {
+    let x, y, swap, octant, octantCount, pixelCount;
+    let dxsquare, dysquare, dxdiag, dydiag;
+    let d, u, v, k1, k2, k3, dSdx, dSdy;
+    octant = getOctant(D, E);
+    if (xs !== xe || ys !== ye) {
+      x = xe - xs; y = ye - ys;
+      dSdx = 2 * A * x + B * y + D;
+      dSdy = B * x + 2 * C * y + E;
+      octantCount = getOctant(dSdx, dSdy) - octant;
+      if (octantCount < 0) octantCount += 8;
+    } else octantCount = 8;
+    dxdiag = dydiag = 1; dxsquare = dysquare = 0;
+    if ((octant + 1) & 4) { D = -D; dxdiag = -1; }
+    if ((octant - 1) & 4) { E = -E; dydiag = -1; }
+    if ((octant - 1) & 2) B = -B;
+    if (octant & 2) {
+      dysquare = dydiag; swap = A; A = C; C = swap; swap = D; D = E; E = swap;
+    } else dxsquare = dxdiag;
+    A *= 4; B *= 4; C *= 4; D *= 4; E *= 4; F *= 4;
+    d = A + truncDiv(B, 2) + truncDiv(C, 4) + D + truncDiv(E, 2) + F;
+    u = A + truncDiv(B, 2) + D; v = A + truncDiv(B, 2) + D + E;
+    k1 = 2 * A; k2 = 2 * A + B; k3 = 2 * A + 2 * B + 2 * C;
+    if (!(octant & 1)) { d = -d; k1 = -k1; u = -u; k2 = -k2; v = -v; k3 = -k3; }
+    x = xs; y = ys; pixelCount = -1;
+    let guard = 0;
+    for (;;) {
+      if (++guard > 100000) { plotBresenham(target, x, y, xe, ye); return; }
+      if (!octantCount) pixelCount = (octant & 2) ? 1 + Math.abs(ye - y) : 1 + Math.abs(xe - x);
+      while ((u > 0 || (octant & 1)) && (v < 0 || !(octant & 1))) {
+        target.setPixel(x, y, 1);
+        if (--pixelCount === 0) return;
+        if (d < 0) { x += dxsquare; y += dysquare; u += k1; v += k2; d += u; }
+        else { x += dxdiag; y += dydiag; u += k2; v += k3; d += v; }
+        if (++guard > 100000) { plotBresenham(target, x, y, xe, ye); return; }
+      }
+      if (--octantCount < 0) { plotBresenham(target, x, y, xe, ye); return; }
+      if (++octant & 1) {
+        d = -d - u + v - k1 + k2; v = -2 * u + v - k1 + k2; u = -u - k1 + k2;
+        k3 = -4 * k1 + 4 * k2 - k3; k2 = -2 * k1 + k2; k1 = -k1;
+        swap = dxdiag; dxdiag = -dydiag; dydiag = swap;
+      } else {
+        d = -d + u - truncDiv(v, 2) + truncDiv(k2, 2) - truncDiv(3 * k3, 8);
+        u = u - v + truncDiv(k2, 2) - truncDiv(k3, 2); v = -v + k2 - truncDiv(k3, 2);
+        k1 = -k1 + 2 * k2 - k3; k2 = k2 - k3; k3 = -k3;
+        swap = dxsquare; dxsquare = -dysquare; dysquare = swap;
+      }
+    }
+  }
+  function plotPittewayCurve(target, xs, ys, xc, yc, xe, ye) {
+    let xq = xe - xs, yq = ye - ys, xr = xc - xs, yr = yc - ys;
+    let xprod = xr * yq - xq * yr;
+    let A, B, C, D, E, F;
+    if (xprod === 0) { plotBresenham(target, xs, ys, xc, yc); plotBresenham(target, xc, yc, xe, ye); return; }
+    if (xprod < 0) { [xs, xe] = [xe, xs]; [ys, ye] = [ye, ys]; xq = -xq; yq = -yq; xr += xq; yr += yq; xprod = -xprod; }
+    A = 4 * (yr - yq) * yr + yq * yq;
+    B = 4 * ((xq - xr) * yr - (yr - yq) * xr) - 2 * xq * yq;
+    C = 4 * (xr - xq) * xr + xq * xq;
+    D = 4 * yr * xprod; E = -4 * xr * xprod; F = 0;
+    pittewayConic(target, xs, ys, xe, ye, A, B, C, D, E, F);
+    target.setPixel(xs, ys, 1); target.setPixel(xe, ye, 1);
+  }
+
   function showOctants() {
     raster.clear();
     const directions = [[15,5],[15,11],[5,15],[-5,15],[-15,11],[-15,5],[-15,-5],[-8,-15]];
@@ -198,6 +273,8 @@
     const started = performance.now();
     if (ui.primitive.value === 'circle') {
       plotBresenhamCircle(raster, Number(ui.cx.value), Number(ui.cy.value), Number(ui.radius.value));
+    } else if (ui.primitive.value === 'curve') {
+      plotPittewayCurve(raster, Number(ui.qx0.value), Number(ui.qy0.value), Number(ui.qxc.value), Number(ui.qyc.value), Number(ui.qx1.value), Number(ui.qy1.value));
     } else {
       const x0 = Number(ui.x0.value), y0 = Number(ui.y0.value);
       const x1 = Number(ui.x1.value), y1 = Number(ui.y1.value);
@@ -211,17 +288,18 @@
     updateTrace();
     ui.pixelMetric.textContent = String(raster.count());
     ui.timeMetric.textContent = elapsed.toFixed(3);
-    const objectName = ui.primitive.value === 'circle' ? 'Окружность Брезенхема' : ({ step: 'Пошаговый алгоритм', dda: 'ЦДА', bresenham: 'Брезенхем', wu: 'Ву · сглаживание' })[method];
+    const objectName = ui.primitive.value === 'circle' ? 'Окружность Брезенхема' : ui.primitive.value === 'curve' ? 'Дуга Кастла–Питвея' : ({ step: 'Пошаговый алгоритм', dda: 'ЦДА', bresenham: 'Брезенхем', wu: 'Ву · сглаживание' })[method];
     ui.methodMetric.textContent = objectName;
     message.textContent = `${objectName}: растр построен за ${elapsed.toFixed(3)} мс. Координаты привязаны к центрам ячеек.`;
   }
 
   ui.primitive.addEventListener('change', () => {
     const isCircle = ui.primitive.value === 'circle';
-    ui.lineCoordinates.classList.toggle('hidden', isCircle);
+    const isCurve = ui.primitive.value === 'curve';
+    ui.lineCoordinates.classList.toggle('hidden', isCircle || isCurve);
     ui.circleControls.classList.toggle('hidden', !isCircle);
-    if (isCircle) ui.algorithm.disabled = true;
-    else ui.algorithm.disabled = false;
+    ui.curveControls.classList.toggle('hidden', !isCurve);
+    ui.algorithm.disabled = isCircle || isCurve;
     showEndpoints();
   });
 

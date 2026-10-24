@@ -39,3 +39,7 @@ th, td { padding: 7px 10px; border-bottom: 1px solid #e8e3d8; }
 th { position: sticky; top: 0; background: #eeece3; color: #5f665a; }
 td { font-variant-numeric: tabular-nums; }
 @media(max-width:600px) { .trace-panel { padding: 12px; } .trace-header h2 { font-size: 15px; } }
+
+.curve-controls { display:flex; flex-wrap:wrap; gap:10px; margin:12px 0; }
+.curve-controls label { display:grid; gap:4px; font-size:13px; }
+.curve-controls input { width:82px; }
