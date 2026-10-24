@@ -1,8 +1,15 @@
-# Уведомления о сторонних материалах
+# Third-party notices
 
-В коде использована целочисленная схема трассировки конических сегментов, основанная на описании алгоритма Castle–Pitteway. Для сверки структуры конечных разностей использован открытый проект `jvanaken1/conic-draw`:
+## Pitteway conic rasterization reference implementation
 
-- Репозиторий: https://github.com/jvanaken1/conic-draw
-- Лицензия, указанная в источнике: MIT
+The integer finite-difference conic-tracing section in `app.js` is a JavaScript adaptation of the Pitteway conic-tracing approach documented and demonstrated by Jerry R. Van Aken in the `jvanaken1/conic-draw` project. The project publishes its source under the MIT License.
 
-Приложение написано на обычных HTML, CSS и JavaScript и не загружает внешние библиотеки во время работы. Прочие алгоритмы (пошаговый, ЦДА, Брезенхем и Ву) реализованы как самостоятельные функции на основе общеизвестных описаний растеризации.
+Source: https://github.com/jvanaken1/conic-draw
+
+Copyright (c) 2018 Jerry R. Van Aken
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

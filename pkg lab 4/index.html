@@ -4,66 +4,145 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f1e9">
+  <meta name="description" content="Интерактивная визуализация растровых алгоритмов, виртуального пиксельного поля и сравнение производительности.">
   <title>Дискретная графика</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar"><h1>Дискретная графика</h1></header>
-  <main>
-    <section class="workspace">
-      <div class="field">
-        <label for="primitive">Объект</label>
-        <select id="primitive"><option value="line">Отрезок</option><option value="circle">Окружность</option><option value="curve">Дуга Кастла–Питвея</option></select>
-      </div>
-      <div class="field">
-        <label for="algorithm">Алгоритм</label>
-        <select id="algorithm"><option value="step">Пошаговый</option><option value="dda">ЦДА (DDA)</option><option value="bresenham">Брезенхем</option><option value="wu">Ву · сглаживание</option></select>
-      </div>
-      <div id="circleControls" class="circle-controls hidden">
-        <label>Центр X <input id="cx" type="number" value="0"></label>
-        <label>Центр Y <input id="cy" type="number" value="0"></label>
-        <label>Радиус <input id="radius" type="number" min="1" max="20" value="10"></label>
-      </div>
-      <div id="curveControls" class="curve-controls hidden">
-        <label>x₀ <input id="qx0" type="number" value="-16"></label><label>y₀ <input id="qy0" type="number" value="-7"></label>
-        <label>xс <input id="qxc" type="number" value="0"></label><label>yс <input id="qyc" type="number" value="12"></label>
-        <label>x₁ <input id="qx1" type="number" value="16"></label><label>y₁ <input id="qy1" type="number" value="-6"></label>
-      </div>
-      <div class="canvas-tools"><button id="zoomOut" type="button">−</button><span id="zoomValue">16 px</span><button id="zoomIn" type="button">+</button></div>
-      <div class="coordinates line-coordinates">
-        <label>x₀ <input id="x0" type="number" value="-12"></label>
-        <label>y₀ <input id="y0" type="number" value="-5"></label>
-        <label>x₁ <input id="x1" type="number" value="12"></label>
-        <label>y₁ <input id="y1" type="number" value="8"></label>
-      </div>
-      <div class="actions"><button id="drawButton">Построить</button><button id="clearRaster" class="secondary" type="button">Очистить</button><button id="downloadImage" class="secondary" type="button">Экспорт PNG</button><button id="octantDemo" class="secondary" type="button">Показать 8 октантов</button></div>
-      <p id="message" role="status">Сетка координат: целые значения соответствуют центрам ячеек.</p>
-      <div class="canvas-meta"><span id="cursorReadout">Координаты: —</span><span id="gridSizeLabel">41 × 31 ячейка</span></div>
-      <canvas id="rasterCanvas" width="800" height="520" aria-label="Координатная сетка"></canvas>
-      <div class="metrics" aria-label="Результаты построения">
-        <article><span>Заполнено ячеек</span><strong id="pixelMetric">0</strong></article>
-        <article><span>Время вычисления</span><strong><b id="timeMetric">—</b> мс</strong></article>
-        <article><span>Текущий метод</span><strong id="methodMetric">Брезенхем</strong></article>
-      </div>
-    <section class="benchmark-panel" aria-labelledby="benchmarkTitle">
-      <div class="benchmark-head"><div><h2 id="benchmarkTitle">Стресс-тест виртуального растра</h2><p>100 000 случайных отрезков и 50 000 окружностей. В замер входит только растеризация в числовой массив.</p></div><button id="runBenchmark" type="button">Запустить тест</button></div>
-      <div class="benchmark-progress"><span id="benchmarkProgress"></span></div>
-      <p id="benchmarkStatus" role="status">Ожидание запуска</p>
-      <div class="benchmark-stats"><article><span>Отрезки · 100 000</span><strong id="lineBenchStat">—</strong></article><article><span>Окружности · 50 000</span><strong id="circleBenchStat">—</strong></article><article><span>Общее время ядра</span><strong id="totalBenchStat">—</strong></article></div>
+  <header class="topbar">
+    <nav class="main-nav" aria-label="Основная навигация">
+      <a class="nav-link active" href="#workspace">Рабочее поле</a>
+      <a class="nav-link" href="#benchmark">Производительность</a>
+      <a class="nav-link" href="#report-download">Отчёт</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <div class="section-heading" id="workspace">
+      <div><span class="section-index">01</span><h2>Рабочее поле</h2><p>Задайте координаты или укажите точки прямо на сетке.</p></div>
+      <div class="section-meta"><span class="mini-dot"></span> Виртуальный растр · Float32Array</div>
+    </div>
+
+    <section class="workbench-layout" aria-label="Рабочее поле и параметры алгоритмов">
+      <article class="panel raster-panel">
+        <div class="panel-header raster-header">
+          <div class="panel-title"><span class="panel-icon grid-icon">▦</span><div><h3>Дискретная плоскость</h3><p>Целочисленная координатная сетка</p></div></div>
+          <div class="canvas-tools">
+            <button class="icon-button" id="zoomOut" aria-label="Уменьшить масштаб" title="Уменьшить масштаб">−</button>
+            <span class="zoom-value" id="zoomValue">14 px</span>
+            <button class="icon-button" id="zoomIn" aria-label="Увеличить масштаб" title="Увеличить масштаб">+</button>
+            <button class="icon-button reset-view" id="resetView" aria-label="Вернуть исходный масштаб" title="Исходный масштаб">↺</button>
+          </div>
+        </div>
+        <div class="canvas-statusline"><span class="status-chip"><i></i> <b id="gridSizeLabel">61 × 41</b> ячейка</span><span id="cursorReadout">Координаты: наведите на сетку</span></div>
+        <div class="canvas-scroller" id="canvasScroller">
+          <canvas id="rasterCanvas" aria-label="Координатная сетка виртуального растра. Нажмите на поле, чтобы задать точки. Ваши алгоритмы вычисляют заполненные ячейки до отрисовки сетки."></canvas>
+        </div>
+        <div class="canvas-legend">
+          <span><i class="legend-pixel bright"></i> закрашенный пиксель</span>
+          <span><i class="legend-pixel faint"></i> частичная интенсивность α</span>
+          <span><i class="legend-axis"></i> оси координат</span>
+        </div>
+        <div class="canvas-bottomline">
+          <div class="hint-inline"><span class="hint-symbol">↗</span><span id="canvasHint">Для отрезка кликните две точки: начало и конец.</span></div>
+          <button class="text-button" id="downloadImage"><span>↓</span> Экспорт PNG</button>
+        </div>
+      </article>
+
+      <aside class="panel controls-panel">
+        <div class="panel-header">
+          <div class="panel-title"><span class="panel-icon sliders-icon">≡</span><div><h3>Параметры</h3><p>Входные данные алгоритма</p></div></div>
+        </div>
+        <div class="controls-body">
+          <label class="field-label" for="primitive">Геометрический объект</label>
+          <div class="select-wrap"><select id="primitive" class="field-select"><option value="line">Отрезок</option><option value="circle">Окружность</option><option value="curve">Дуга Кастла–Питвея</option></select><span>⌄</span></div>
+
+          <div id="lineFields" class="param-group">
+            <label class="field-label" for="algorithm">Алгоритм растеризации</label>
+            <div class="select-wrap"><select id="algorithm" class="field-select"><option value="step">Пошаговый</option><option value="dda">ЦДА (DDA)</option><option value="bresenham" selected>Брезенхем</option><option value="wu">Ву · сглаживание</option></select><span>⌄</span></div>
+            <div class="coord-block">
+              <div class="coord-heading"><span>ТОЧКА A</span><span>Начало</span></div>
+              <div class="coord-row"><label><span>x</span><input id="x0" type="number" min="-30" max="30" value="-22" step="1"></label><label><span>y</span><input id="y0" type="number" min="-20" max="20" value="-10" step="1"></label></div>
+            </div>
+            <div class="coord-block">
+              <div class="coord-heading"><span>ТОЧКА B</span><span>Конец</span></div>
+              <div class="coord-row"><label><span>x</span><input id="x1" type="number" min="-30" max="30" value="20" step="1"></label><label><span>y</span><input id="y1" type="number" min="-20" max="20" value="13" step="1"></label></div>
+            </div>
+          </div>
+
+          <div id="circleFields" class="param-group hidden">
+            <div class="field-label">Центр окружности</div>
+            <div class="coord-row"><label><span>x</span><input id="cx" type="number" min="-30" max="30" value="0" step="1"></label><label><span>y</span><input id="cy" type="number" min="-20" max="20" value="0" step="1"></label></div>
+            <label class="field-label radius-label" for="radius">Радиус <output id="radiusValue">12</output></label>
+            <input id="radius" class="range-input" type="range" min="2" max="20" value="12" step="1">
+          </div>
+
+          <div id="curveFields" class="param-group hidden">
+            <p class="field-help">Три точки задают параболическую дугу: начало, контрольная точка и конец.</p>
+            <div class="coord-block"><div class="coord-heading"><span>НАЧАЛО</span><span>P₀</span></div><div class="coord-row"><label><span>x</span><input id="qx0" type="number" min="-30" max="30" value="-23" step="1"></label><label><span>y</span><input id="qy0" type="number" min="-20" max="20" value="-9" step="1"></label></div></div>
+            <div class="coord-block"><div class="coord-heading"><span>КОНТРОЛЬ</span><span>P₁</span></div><div class="coord-row"><label><span>x</span><input id="qxc" type="number" min="-30" max="30" value="0" step="1"></label><label><span>y</span><input id="qyc" type="number" min="-20" max="20" value="17" step="1"></label></div></div>
+            <div class="coord-block"><div class="coord-heading"><span>КОНЕЦ</span><span>P₂</span></div><div class="coord-row"><label><span>x</span><input id="qx1" type="number" min="-30" max="30" value="23" step="1"></label><label><span>y</span><input id="qy1" type="number" min="-20" max="20" value="-8" step="1"></label></div></div>
+          </div>
+
+          <div class="control-divider"></div>
+          <label class="toggle-row"><span><b>Сохранять предыдущие пиксели</b><small>Рисовать поверх текущего растра</small></span><input id="keepPixels" type="checkbox"><i class="toggle"></i></label>
+          <div class="button-row"><button class="button-secondary" id="clearRaster">Очистить</button><button class="button-primary" id="drawButton"><span>Построить</span><span class="button-arrow">↗</span></button></div>
+          <button class="button-ghost" id="octantDemo"><span class="ghost-icon">✳</span> Показать 8 октантов</button>
+          <p id="formMessage" class="form-message" role="status" aria-live="polite"></p>
+        </div>
+      </aside>
     </section>
 
-    <section id="benchmarkCharts" class="charts-panel" aria-label="Графики производительности">
-      <div class="chart-block"><h2>Время и количество примитивов</h2><p>Накопленное время работы ядра в зависимости от обработанных примитивов.</p><canvas id="countChart" width="800" height="300" aria-label="График времени от количества примитивов"></canvas></div>
-      <div class="chart-block"><h2>Время и длина отрезка</h2><p>Время растеризации 1 000 отрезков выбранным алгоритмом для разных длин.</p><canvas id="lengthChart" width="800" height="300" aria-label="График времени от длины отрезка"></canvas></div>
+    <section class="results-grid" aria-label="Результаты построения">
+      <article class="metric-card"><div class="metric-icon cyan-icon">▦</div><div><span class="metric-label">Заполнено ячеек</span><strong id="pixelMetric">0</strong><small>уникальных ячеек виртуального растра</small></div><span class="metric-decoration">01</span></article>
+      <article class="metric-card"><div class="metric-icon violet-icon">◷</div><div><span class="metric-label">Время вычисления</span><strong id="timeMetric">— <small>мс</small></strong><small>без учёта отрисовки интерфейса</small></div><span class="metric-decoration">02</span></article>
+      <article class="metric-card"><div class="metric-icon mint-icon">ƒ</div><div><span class="metric-label">Текущий метод</span><strong id="methodMetric">Брезенхем</strong><small id="objectMetric">Отрезок · все октанты</small></div><span class="metric-decoration">03</span></article>
     </section>
 
-      <section class="trace-panel" aria-label="Пошаговая трассировка">
-        <div class="trace-header"><h2>Трассировка пикселей</h2><span id="traceCount">0 точек</span></div>
-        <p>Таблица показывает уникальные ячейки, записанные алгоритмом в виртуальный растр.</p>
-        <div class="trace-wrap"><table><thead><tr><th>№</th><th>x</th><th>y</th><th>Интенсивность</th></tr></thead><tbody id="traceTableBody"></tbody></table></div>
-      </section>
+    <section class="analysis-row">
+      <article class="panel formula-panel">
+        <div class="subsection-top"><div><span class="micro-eyebrow">ALGORITHM INSIGHT</span><h3 id="formulaTitle">Алгоритм Брезенхема</h3></div><span class="formula-badge" id="complexityBadge">O(max(Δx, Δy))</span></div>
+        <p id="formulaDescription">Решение принимается по целочисленной ошибке. На каждой итерации выбирается горизонтальный, вертикальный или диагональный шаг — без вычисления дробных координат.</p>
+        <div class="formula-code" id="formulaCode"><span>e = 2 · err</span><span>если e ≥ −Δy → x += sx</span><span>если e ≤  Δx → y += sy</span></div>
+        <div class="formula-footer"><span>Целочисленная арифметика</span><span class="formula-tag">INTEGER CORE</span></div>
+      </article>
+      <article class="panel example-panel">
+        <div class="subsection-top"><div><span class="micro-eyebrow">TRACE / EXAMPLE</span><h3>Пошаговый разбор</h3></div><span class="trace-count" id="traceCount">8 точек</span></div>
+        <p class="trace-intro" id="traceIntro">Отрезок A(2, 1) → B(9, 5). Сравним шаги алгоритма на небольшом примере.</p>
+        <div class="trace-table-wrap"><table class="trace-table"><thead><tr><th>i</th><th>x</th><th>y</th><th>Решение</th></tr></thead><tbody id="traceTableBody"></tbody></table></div>
+        <div class="trace-note"><span>i</span><p>Координаты целочисленны: каждая пара (x, y) адресует одну ячейку виртуального массива, а не произвольную точку на экране.</p></div>
+      </article>
     </section>
+
+    <section class="section-heading benchmark-heading" id="benchmark">
+      <div><span class="section-index">02</span><h2>Лаборатория производительности</h2><p>Измерение чистого времени заполнения виртуального растра без рендеринга UI.</p></div>
+      <div class="benchmark-actions"><span class="benchmark-status" id="benchmarkStatus"><i></i> Ожидает запуска</span><button class="button-primary run-benchmark" id="runBenchmark"><span class="run-icon">▶</span> Запустить стресс-тест</button></div>
+    </section>
+
+    <section class="benchmark-layout">
+      <article class="panel benchmark-panel">
+        <div class="panel-header"><div class="panel-title"><span class="panel-icon speed-icon">⌁</span><div><h3>Нагрузка на растр</h3><p>100 000 отрезков + 50 000 окружностей</p></div></div><span class="benchmark-tag">BENCHMARK</span></div>
+        <div class="benchmark-stats"><div><span>Отрезки</span><strong id="lineBenchStat">—</strong><small>случайные направления, 8 октантов</small></div><div><span>Окружности</span><strong id="circleBenchStat">—</strong><small>радиус 4–80 пикселей</small></div><div><span>Общее вычисление</span><strong id="totalBenchStat">—</strong><small>чистое время растеризации</small></div></div>
+        <div class="progress-track"><span id="benchmarkProgress"></span></div>
+        <div class="benchmark-footnote"><span class="tiny-info">i</span><p>Точки и радиусы генерируются до запуска таймера. Между пакетами интерфейс обновляется отдельно; в график попадает накопленное время только работы алгоритмов.</p></div>
+      </article>
+      <article class="panel benchmark-note-panel"><span class="micro-eyebrow">REPRODUCIBLE TEST</span><h3>Что именно измеряется?</h3><p>Тест записывает результат в двумерный массив 512 × 512. Алгоритмы не обращаются к Canvas и не рисуют экранные примитивы.</p><div class="note-stat-list"><div><span class="note-symbol">↗</span><span>Набор тестовых данных создаётся заранее</span></div><div><span class="note-symbol">⌁</span><span>Высокоточный таймер <code>performance.now()</code></span></div><div><span class="note-symbol">▦</span><span>Одна реализация алгоритма для UI и теста</span></div></div></article>
+    </section>
+
+    <section class="charts-grid">
+      <article class="panel chart-panel"><div class="chart-heading"><div><span class="micro-eyebrow">CHART / 01</span><h3>Время и число примитивов</h3></div><span class="chart-unit">накопленное время · мс</span></div><div class="chart-legend"><span><i class="legend-line line-cyan"></i>Отрезки</span><span><i class="legend-line line-violet"></i>Окружности</span></div><div id="countChart" class="chart-area"><div class="chart-empty"><span>↗</span><p>Запустите стресс-тест,<br>чтобы построить график</p></div></div><div class="chart-footer"><span>Количество обработанных примитивов</span><span>512 × 512 · virtualGrid</span></div></article>
+      <article class="panel chart-panel"><div class="chart-heading"><div><span class="micro-eyebrow">CHART / 02</span><h3>Время и длина отрезка</h3></div><span class="chart-unit">мс на 1 000 линий</span></div><div class="chart-legend"><span><i class="legend-line line-mint"></i><span id="lengthChartLegend">Брезенхем</span></span></div><div id="lengthChart" class="chart-area"><div class="chart-empty"><span>∿</span><p>После теста здесь появится<br>зависимость от длины линии</p></div></div><div class="chart-footer"><span>Длина линии, пикселей</span><span>16 · 32 · 64 · 128 · 192 · 256</span></div></article>
+    </section>
+
+    <section class="report-download-row" id="report-download" aria-label="Сопроводительный отчёт">
+      <div><h2>Сопроводительный отчёт</h2><p>Методика измерений, математическое обоснование алгоритмов и фактические результаты после запуска теста.</p></div>
+      <a class="text-button report-download" href="report.md" download><span>↓</span> Скачать отчёт</a>
+    </section>
+
   </main>
+
+  <footer class="footer"><p>Виртуальный растр · численная модель · измеряемые алгоритмы</p><a href="#top" class="to-top">Наверх ↑</a></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
 </body>
 </html>
