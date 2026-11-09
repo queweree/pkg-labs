@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1e9">
+  <meta name="description" content="Лабораторная работа 5: интерактивное отсечение отрезков и многоугольников. Сазерленд–Коэн, Лианг–Барски, Сайрус–Бек, Сазерленд–Ходжман, Уайлер–Атертон, Quadtree на 500 000 отрезков.">
+  <title>Отсечение отрезков и многоугольников</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <nav class="main-nav" id="mainNav" aria-label="Основная навигация">
+      <a class="nav-link active" href="#workspace">Поле</a>
+      <a class="nav-link" href="#algorithms">Алгоритмы</a>
+      <a class="nav-link" href="#polygons">Многоугольники</a>
+      <a class="nav-link" href="#performance">500 000</a>
+      <a class="nav-link" href="#tests">Тесты</a>
+    </nav>
+    <div class="topbar-status"><i></i><span>ε = 10⁻⁷</span></div>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-line"></span>ЛАБОРАТОРНАЯ 05 · ВАРИАНТ 11</div>
+        <h1 id="heroTitle">Отсечение <em>отрезков</em><br>и многоугольников</h1>
+        <p class="hero-description">
+          Одно окно, три алгоритма для отрезков, Сазерленд–Ходжман для выпуклого
+          многоугольника и контурный обход Уайлера–Атертона для вогнутых фигур,
+          дыр и самопересечений. Ниже — интерактивное поле, пространственный
+          индекс Quadtree и замеры на базе из 500 000 отрезков.
+        </p>
+        <div class="hero-pills">
+          <span><b>01</b> Сазерленд–Коэн</span>
+          <span><b>02</b> Лианг–Барски</span>
+          <span><b>03</b> Сазерленд–Ходжман</span>
+          <span><b>04</b> Уайлер–Атертон</span>
+          <span><b>05</b> Quadtree</span>
+        </div>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="visual-topline"><span>VIEWPORT / SCHEMATIC</span><span>ε 10⁻⁷</span></div>
+        <svg class="hero-grid" viewBox="0 0 380 250" role="img" aria-label="Схема отсечения отрезков прямоугольным окном">
+          <defs>
+            <pattern id="miniGrid" width="19" height="19" patternUnits="userSpaceOnUse">
+              <path d="M 19 0 L 0 0 0 19" fill="none" stroke="#e2ddd0" stroke-width="1"></path>
+            </pattern>
+          </defs>
+          <rect width="380" height="250" fill="#fbf9f3"></rect>
+          <rect width="380" height="250" fill="url(#miniGrid)"></rect>
+          <line x1="0" y1="125" x2="380" y2="125" stroke="#c9c3b4" stroke-width="1"></line>
+          <line x1="190" y1="0" x2="190" y2="250" stroke="#c9c3b4" stroke-width="1"></line>
+          <g stroke="#bcb4a4" stroke-width="1.5">
+            <line x1="22" y1="38" x2="352" y2="213"></line>
+            <line x1="45" y1="208" x2="335" y2="55"></line>
+            <line x1="16" y1="125" x2="364" y2="125"></line>
+            <line x1="100" y1="16" x2="100" y2="236"></line>
+            <line x1="270" y1="16" x2="270" y2="236"></line>
+            <line x1="28" y1="76" x2="214" y2="196"></line>
+          </g>
+          <g stroke="#567347" stroke-width="2.4" stroke-linecap="round">
+            <line x1="94" y1="71" x2="277" y2="177"></line>
+            <line x1="106" y1="179" x2="275" y2="76"></line>
+            <line x1="100" y1="125" x2="270" y2="125"></line>
+            <line x1="100" y1="56" x2="100" y2="194"></line>
+            <line x1="190" y1="61" x2="190" y2="189"></line>
+            <line x1="123" y1="92" x2="247" y2="160"></line>
+            <line x1="270" y1="65" x2="270" y2="185"></line>
+          </g>
+          <rect x="98" y="54" width="174" height="142" fill="rgba(180,111,80,.07)" stroke="#b46f50" stroke-width="1.6" stroke-dasharray="5 4"></rect>
+          <g fill="#b46f50">
+            <rect x="93" y="49" width="10" height="10" rx="2" fill="#fffdf8" stroke="#b46f50"></rect>
+            <rect x="267" y="49" width="10" height="10" rx="2" fill="#fffdf8" stroke="#b46f50"></rect>
+            <rect x="93" y="191" width="10" height="10" rx="2" fill="#fffdf8" stroke="#b46f50"></rect>
+            <rect x="267" y="191" width="10" height="10" rx="2" fill="#fffdf8" stroke="#b46f50"></rect>
+          </g>
+          <circle cx="100" cy="125" r="3.4" fill="#f4f1e9" stroke="#567347" stroke-width="1.5"></circle>
+          <circle cx="270" cy="125" r="3.4" fill="#f4f1e9" stroke="#567347" stroke-width="1.5"></circle>
+        </svg>
+        <div class="visual-footer"><span><i></i> видимые части</span><span>окно · 4 бита</span></div>
+      </div>
+    </section>
+
+    <section id="workspace" aria-labelledby="workspaceTitle">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">01</span>
+          <h2 id="workspaceTitle">Рабочее поле</h2>
+          <p>Перетаскивайте окно и его ручки. Масштаб — колесом мыши, панорама — перетаскиванием фона.</p>
+        </div>
+        <div class="section-meta"><span class="mini-dot"></span><span id="mainMeta">Вариант 11 · 18 отрезков</span></div>
+      </div>
+
+      <div class="workbench-layout">
+        <article class="panel canvas-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span class="panel-icon">◫</span>
+              <div><h3>Координатная плоскость</h3><p>Отсекатель и исходная геометрия</p></div>
+            </div>
+            <div class="canvas-tools">
+              <button class="icon-button" id="mainZoomOut" aria-label="Уменьшить масштаб" title="Уменьшить масштаб">−</button>
+              <span class="zoom-value" id="mainZoomValue">100%</span>
+              <button class="icon-button" id="mainZoomIn" aria-label="Увеличить масштаб" title="Увеличить масштаб">+</button>
+              <button class="icon-button" id="mainEditToggle" type="button" aria-pressed="false" aria-label="Редактировать отрезки" title="Редактировать отрезки">✎</button>
+              <button class="icon-button reset-view" id="mainFit" aria-label="Показать все данные" title="Показать все данные">↺</button>
+            </div>
+          </div>
+          <div class="canvas-statusline">
+            <span class="status-chip"><i></i> окно <b id="mainWindowLabel">−45 … 45</b></span>
+            <span id="mainCursor">Курсор: наведите на поле</span>
+          </div>
+          <div class="canvas-shell main-shell">
+            <canvas id="mainCanvas" aria-label="Интерактивное поле: система координат, исходные отрезки, отсекающее окно и видимые части"></canvas>
+          </div>
+          <div class="canvas-legend">
+            <span><i class="legend-line original"></i> исходные отрезки</span>
+            <span><i class="legend-line visible"></i> видимые части</span>
+            <span><i class="legend-window"></i> окно отсечения</span>
+            <span><i class="legend-point"></i> вырожденная точка</span>
+          </div>
+          <div class="canvas-bottomline">
+            <div class="hint-inline"><span class="hint-symbol">↗</span><span id="mainHint">Тяните окно за центр, ручки меняют размер. ✎ включает правку отрезков.</span></div>
+            <div class="canvas-actions">
+              <button class="text-button" id="exportMainPng"><span>↓</span> PNG</button>
+            </div>
+          </div>
+        </article>
+
+        <aside class="panel controls-panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">≡</span><div><h3>Параметры</h3><p>Данные и метод отсечения</p></div></div>
+            <span class="live-label">LIVE</span>
+          </div>
+          <div class="controls-body">
+            <div class="field-label"><span>Набор данных</span><span class="field-hint" id="mainDatasetInfo">демо</span></div>
+            <div class="data-actions">
+              <label class="button-secondary file-button">
+                <input id="mainFileInput" type="file" accept=".txt,.csv,text/plain" hidden>
+                <span class="file-icon">↥</span> Загрузить файл
+              </label>
+              <a class="button-ghost compact" href="samples/segments.txt" download><span>↓</span> Пример</a>
+            </div>
+            <p class="format-hint"><code>n</code> · n строк <code>x1 y1 x2 y2</code> · <code>xmin ymin xmax ymax</code></p>
+
+            <div class="control-divider"></div>
+            <div class="field-label"><span>Метод отсечения отрезков</span><span class="field-hint">сравнение ниже</span></div>
+            <div class="method-switch" id="methodSwitch" role="group" aria-label="Метод отсечения отрезков">
+              <button class="method-option" data-method="sutherland" type="button"><span>01</span> Сазерленд–Коэн</button>
+              <button class="method-option active" data-method="liang" type="button"><span>02</span> Лианг–Барски</button>
+              <button class="method-option" data-method="cyrus" type="button"><span>03</span> Сайрус–Бек</button>
+            </div>
+
+            <div class="control-divider"></div>
+            <div class="field-label"><span>Окно отсечения</span><span class="field-hint">мировые координаты</span></div>
+            <div class="window-grid">
+              <label><span>x<sub>min</sub></span><input id="winXmin" type="number" step="1" value="-45"></label>
+              <label><span>y<sub>min</sub></span><input id="winYmin" type="number" step="1" value="-30"></label>
+              <label><span>x<sub>max</sub></span><input id="winXmax" type="number" step="1" value="45"></label>
+              <label><span>y<sub>max</sub></span><input id="winYmax" type="number" step="1" value="30"></label>
+            </div>
+            <div class="inline-buttons">
+              <button class="button-secondary small" id="applyWindow" type="button">Применить</button>
+              <button class="button-ghost compact" id="resetMain" type="button"><span>↺</span> Демо-набор</button>
+            </div>
+
+            <div class="control-divider"></div>
+            <label class="toggle-row"><span><b>Исходные отрезки</b><small>Показывать геометрию вне окна</small></span><input id="showOriginal" type="checkbox" checked><i class="toggle"></i></label>
+            <label class="toggle-row"><span><b>AABB-габариты</b><small>Битовые маски префильтра</small></span><input id="showAabb" type="checkbox"><i class="toggle"></i></label>
+            <label class="toggle-row"><span><b>Дерево Quadtree</b><small>Ячейки текущего набора</small></span><input id="showMainTree" type="checkbox"><i class="toggle"></i></label>
+
+            <div class="inline-buttons bottom-actions">
+              <button class="button-primary" id="randomMain" type="button"><span>Сгенерировать</span><span class="button-arrow">↗</span></button>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="results-grid">
+        <article class="metric-card"><div class="metric-icon cyan-icon">≡</div><div><span class="metric-label">Всего отрезков</span><strong id="mainTotal">0</strong><small>в исходном наборе</small></div><span class="metric-decoration">01</span></article>
+        <article class="metric-card"><div class="metric-icon mint-icon">✓</div><div><span class="metric-label">Видимых частей</span><strong id="mainVisible">0</strong><small id="mainPoints">вырожденных точек: 0</small></div><span class="metric-decoration">02</span></article>
+        <article class="metric-card"><div class="metric-icon clay-icon">⊘</div><div><span class="metric-label">Отсечено</span><strong id="mainRejected">0</strong><small id="mainAabb">AABB-префильтр: 0</small></div><span class="metric-decoration">03</span></article>
+        <article class="metric-card"><div class="metric-icon amber-icon">◷</div><div><span class="metric-label">Время ядра</span><strong id="mainTime">— <small>мс</small></strong><small>без отрисовки интерфейса</small></div><span class="metric-decoration">04</span></article>
+      </div>
+    </section>
+
+    <section id="algorithms" aria-labelledby="algorithmsTitle">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">02</span>
+          <h2 id="algorithmsTitle">Три подхода к отрезку</h2>
+          <p>Структурный, параметрический и выпуклый алгоритмы на одних и тех же входных данных.</p>
+        </div>
+        <div class="section-meta"><span class="mono-badge">ε 10⁻⁷</span><span>счётчики операций</span></div>
+      </div>
+
+      <div class="algorithm-grid">
+        <article class="panel algo-card" data-method="sutherland">
+          <div class="algo-top"><span class="algo-tag">STRUCTURAL</span><span class="algo-code">01</span></div>
+          <h3>Сазерленд–Коэн</h3>
+          <p>Четырёхбитный код вершины. Прямая задаётся явно уравнением <code>A·(x − x₀) + B·(y − y₀) = 0</code>, пересечения берутся из него.</p>
+          <div class="formula-box"><span>A = y₂ − y₁ · B = x₁ − x₂</span><span>code ∈ {LEFT, RIGHT, BOTTOM, TOP}</span></div>
+          <div class="algo-foot"><span>O(n + k)</span><span>branch &amp; clip</span></div>
+        </article>
+        <article class="panel algo-card active" data-method="liang">
+          <div class="algo-top"><span class="algo-tag">PARAMETRIC</span><span class="algo-code">02</span></div>
+          <h3>Лианг–Барски</h3>
+          <p>Отрезок <code>P(t) = P₀ + t·d</code>. Четыре границы окна дают ограничения на параметр <code>t ∈ [0, 1]</code>.</p>
+          <div class="formula-box"><span>p = [−dₓ, dₓ, −d_y, d_y]</span><span>q = [x₀−xmin, xmax−x₀, y₀−ymin, ymax−y₀]</span><span>r = q / p → t₀ = max(t₀, r), t₁ = min(t₁, r)</span></div>
+          <div class="algo-foot"><span>O(1)</span><span>4 границы</span></div>
+        </article>
+        <article class="panel algo-card" data-method="cyrus">
+          <div class="algo-top"><span class="algo-tag">VECTOR</span><span class="algo-code">03</span></div>
+          <h3>Сайрус–Бек</h3>
+          <p>Для каждой границы выпуклого отсекателя — внутренняя нормаль. Неравенство <code>n·(P(t) − F) ≥ 0</code> задаёт интервал параметра.</p>
+          <div class="formula-box"><span>f(t) = n·(P₀ − F) + t · n·d</span><span>n·d &gt; 0 → нижняя граница</span><span>n·d &lt; 0 → верхняя граница</span></div>
+          <div class="algo-foot"><span>O(k)</span><span>k = 4 границы</span></div>
+        </article>
+      </div>
+
+      <div class="algo-lower">
+        <article class="panel comparison-panel">
+          <div class="subsection-top">
+            <div><span class="micro-eyebrow">OPERATION COUNTER / LIVE</span><h3>Арифметическая стоимость</h3></div>
+            <span class="table-badge" id="opsBadge">на текущем наборе</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table ops-table">
+              <thead><tr><th>Алгоритм</th><th>×</th><th>÷</th><th>Σ</th><th>сравн.</th><th>время</th><th>результат</th></tr></thead>
+              <tbody id="opsBody"></tbody>
+            </table>
+          </div>
+          <p class="table-note" id="opsNote">Счётчики включают только арифметические операции внутри выбранного метода; подготовка Canvas не учитывается.</p>
+        </article>
+
+        <article class="panel insight-panel">
+          <span class="micro-eyebrow">WHY IT MATTERS</span>
+          <h3>Одинаковый результат — разная цена</h3>
+          <p>Все три метода обязаны вернуть одну и ту же видимую часть. Различаются количество ветвлений, делений и умножений. Таблица сравнивает все методы с Лиангом–Барски на текущем наборе.</p>
+          <div class="insight-list">
+            <div><span class="insight-icon">◫</span><div><b>Отбраковка до пересечения</b><small>Общий AABB-префильтр по 4-битным маскам экономит дорогие вычисления.</small></div></div>
+            <div><span class="insight-icon">ε</span><div><b>Граница — это внутри</b><small>Точка на границе не считается внешней; сравнения идут с допуском 10⁻⁷.</small></div></div>
+            <div><span class="insight-icon">⌁</span><div><b>Точка — не ошибка</b><small>Отрезок нулевой длины внутри окна возвращается вырожденным результатом.</small></div></div>
+          </div>
+          <div class="formula-footer"><span>текущий метод: <b id="currentMethodName">Лианг–Барски</b></span><span class="formula-tag">EPSILON SAFE</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="polygons" aria-labelledby="polygonsTitle">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">03</span>
+          <h2 id="polygonsTitle">Многоугольники и дыры</h2>
+          <p>Вариант 11. Сазерленд–Ходжман для выпуклого контура и Уайлер–Атертон для сложных фигур.</p>
+        </div>
+        <div class="section-meta"><span class="mono-badge">SH + WA</span><span>вогнутость · дыры · самопересечения</span></div>
+      </div>
+
+      <div class="polygon-layout">
+        <article class="panel canvas-panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">◇</span><div><h3>Контур и отсекатель</h3><p>Редактируйте вершины и границы окна</p></div></div>
+            <div class="canvas-tools">
+              <button class="icon-button" id="polyEditToggle" aria-label="Режим редактирования вершин" title="Редактировать вершины">✎</button>
+              <button class="icon-button" id="polyFit" aria-label="Показать все данные" title="Показать все данные">↺</button>
+            </div>
+          </div>
+          <div class="canvas-statusline">
+            <span class="status-chip"><i></i> результат <b id="polyLoopsLabel">0 контуров</b></span>
+            <span id="polyCursor">Курсор: наведите на поле</span>
+          </div>
+          <div class="canvas-shell polygon-shell">
+            <canvas id="polyCanvas" aria-label="Поле отсечения многоугольника: исходные контуры, окно, видимые фрагменты и дыры"></canvas>
+          </div>
+          <div class="canvas-legend">
+            <span><i class="legend-line original"></i> исходный контур</span>
+            <span><i class="legend-fill"></i> отсечённая область</span>
+            <span><i class="legend-window"></i> окно</span>
+            <span><i class="legend-point"></i> пересечение</span>
+          </div>
+          <div class="canvas-bottomline">
+            <div class="hint-inline"><span class="hint-symbol">✎</span><span id="polyHint">Включите редактирование, чтобы двигать вершины.</span></div>
+            <button class="text-button" id="exportPolySvg"><span>↓</span> SVG</button>
+          </div>
+        </article>
+
+        <aside class="panel controls-panel">
+          <div class="panel-header"><div class="panel-title"><span class="panel-icon">⌁</span><div><h3>Сценарии</h3><p>Проверка сложных случаев</p></div></div><span class="live-label">WA</span></div>
+          <div class="controls-body">
+            <div class="preset-grid" id="presetGrid">
+              <button class="preset active" data-preset="convex" type="button"><b>Выпуклый</b><small>Сазерленд–Ходжман</small></button>
+              <button class="preset" data-preset="concave" type="button"><b>Вогнутый</b><small>L-профиль</small></button>
+              <button class="preset" data-preset="hole" type="button"><b>С дырой</b><small>even-odd</small></button>
+              <button class="preset" data-preset="star" type="button"><b>Звезда</b><small>самопересечение</small></button>
+              <button class="preset" data-preset="multi" type="button"><b>Две части</b><small>распад U-контура</small></button>
+            </div>
+
+            <div class="control-divider"></div>
+            <div class="field-label"><span>Алгоритм части 2</span><span class="field-hint" id="polyAlgorithmLabel">Сазерленд–Ходжман</span></div>
+            <div class="method-switch" id="polyAlgorithmSwitch" role="group" aria-label="Алгоритм отсечения многоугольника">
+              <button class="method-option active" data-poly-algorithm="convex" type="button"><span>01</span> Выпуклый: Сазерленд–Ходжман</button>
+              <button class="method-option" data-poly-algorithm="general" type="button"><span>02</span> Сложный: Уайлер–Атертон</button>
+            </div>
+
+            <div class="control-divider"></div>
+            <div class="field-label"><span>Окно отсекателя</span><span class="field-hint">координаты</span></div>
+            <div class="window-grid">
+              <label><span>x<sub>min</sub></span><input id="polyXmin" type="number" step="1" value="20"></label>
+              <label><span>y<sub>min</sub></span><input id="polyYmin" type="number" step="1" value="20"></label>
+              <label><span>x<sub>max</sub></span><input id="polyXmax" type="number" step="1" value="80"></label>
+              <label><span>y<sub>max</sub></span><input id="polyYmax" type="number" step="1" value="80"></label>
+            </div>
+            <div class="inline-buttons"><button class="button-secondary small" id="applyPolyWindow" type="button">Применить</button><button class="button-ghost compact" id="resetPoly" type="button"><span>↺</span> Сбросить</button></div>
+
+            <div class="control-divider"></div>
+            <label class="toggle-row"><span><b>Исходные контуры</b><small>Показывать вне результата</small></span><input id="polyShowOriginal" type="checkbox" checked><i class="toggle"></i></label>
+            <label class="toggle-row"><span><b>Заливка результата</b><small>Правило even-odd</small></span><input id="polyShowFill" type="checkbox" checked><i class="toggle"></i></label>
+            <label class="toggle-row"><span><b>Метки пересечений</b><small>Точки на границе окна</small></span><input id="polyShowNodes" type="checkbox" checked><i class="toggle"></i></label>
+
+            <div class="poly-stats">
+              <div><span>контуров</span><strong id="polyLoopCount">0</strong></div>
+              <div><span>частей</span><strong id="polyComponents">0</strong></div>
+              <div><span>дыр</span><strong id="polyHoles">0</strong></div>
+              <div><span>площадь</span><strong id="polyArea">0</strong></div>
+              <div><span>вершин</span><strong id="polyVertices">0</strong></div>
+              <div><span>пересечений</span><strong id="polyIntersections">0</strong></div>
+            </div>
+
+            <div class="loop-list-wrap">
+              <div class="loop-list-head"><span>Выходные контуры</span><span id="loopListCount">0</span></div>
+              <div class="loop-list" id="polyLoopList"></div>
+            </div>
+            <p class="format-hint">Ориентация: внешние контуры — против часовой, дыры — по часовой. Заливка — even-odd.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="performance" aria-labelledby="performanceTitle">
+      <div class="section-heading performance-heading">
+        <div>
+          <span class="section-index">04</span>
+          <h2 id="performanceTitle">500 000 отрезков</h2>
+          <p>Четыре группы отрезков и окно движутся независимо. Quadtree и битовый AABB-префильтр отбирают кандидатов для каждого кадра.</p>
+        </div>
+        <div class="performance-actions">
+          <span class="bench-status" id="perfStatus"><i></i><span id="perfStatusText">данные не подготовлены</span></span>
+          <button class="button-primary" id="preparePerf" type="button"><span>Подготовить 500k</span><span class="button-arrow">↗</span></button>
+          <button class="button-secondary" id="liveToggle" type="button" disabled><span class="live-dot"></span> Живой режим</button>
+        </div>
+      </div>
+
+      <div class="perf-layout">
+        <article class="panel canvas-panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-icon">▦</span><div><h3>Поток геометрии</h3><p id="perfDatasetLabel">набор ещё не создан</p></div></div>
+            <div class="canvas-tools">
+              <label class="mini-toggle"><input id="showPerfTree" type="checkbox"><span>узлы</span></label>
+              <button class="icon-button" id="perfFit" aria-label="Сбросить вид" title="Сбросить вид">↺</button>
+            </div>
+          </div>
+          <div class="canvas-statusline">
+            <span class="status-chip"><i></i><b id="perfWindowLabel">—</b></span>
+            <span id="perfCursor">Курсор: наведите на поле</span>
+          </div>
+          <div class="canvas-shell perf-shell">
+            <canvas id="perfCanvas" aria-label="Поле 500 000 отрезков, отсекающее окно и видимые части"></canvas>
+          </div>
+          <div class="canvas-legend">
+            <span><i class="legend-line original"></i> 500 000 отрезков</span>
+            <span><i class="legend-line visible"></i> видимые части</span>
+            <span><i class="legend-window"></i> движущееся окно</span>
+            <span><i class="legend-tree"></i> ячейки Quadtree</span>
+          </div>
+          <div class="canvas-bottomline">
+            <div class="hint-inline"><span class="hint-symbol">▶</span><span>Включите живой режим или перетащите окно мышью.</span></div>
+            <span class="mono-note" id="perfFrameNote">frame —</span>
+          </div>
+        </article>
+
+        <aside class="panel perf-panel">
+          <div class="panel-header"><div class="panel-title"><span class="panel-icon">⌁</span><div><h3>Индекс и замеры</h3><p>Quadtree · capacity 64</p></div></div><span class="live-label" id="fpsBadge">FPS —</span></div>
+          <div class="perf-body">
+            <div class="perf-metrics">
+              <div><span>построение</span><strong id="perfBuild">—</strong><small>мс</small></div>
+              <div><span>запрос + клип</span><strong id="perfQuery">—</strong><small>мс / кадр</small></div>
+              <div><span>кандидатов</span><strong id="perfCandidates">—</strong><small>после AABB</small></div>
+              <div><span>видимых</span><strong id="perfVisible">—</strong><small>за кадр</small></div>
+            </div>
+            <div class="tree-line"><span class="tree-pill" id="perfTreeDepth">глубина —</span><span class="tree-pill" id="perfTreeNodes">узлов —</span><span class="tree-pill" id="perfTreeTested">проверено —</span></div>
+
+            <div class="control-divider"></div>
+            <label class="field-label" for="perfDepth"><span>Максимальная глубина</span><output id="perfDepthValue">8</output></label>
+            <input id="perfDepth" class="range-input" type="range" min="3" max="10" step="1" value="8">
+            <button class="button-secondary full-width" id="rebuildTree" type="button" disabled>Перестроить индекс</button>
+
+            <div class="control-divider"></div>
+            <div class="bench-buttons">
+              <button class="button-secondary" id="runDepthBench" type="button" disabled><span>Замер глубины</span><span class="bench-arrow">↗</span></button>
+              <button class="button-secondary" id="runDensityBench" type="button" disabled><span>Замер плотности</span><span class="bench-arrow">↗</span></button>
+            </div>
+            <div class="progress-track"><span id="perfProgress"></span></div>
+            <p class="bench-note" id="perfNote">Подготовьте набор: Для 500 000 отрезков будут построены деревья Quadtree. Затем включите живой режим, чтобы измерить FPS.</p>
+          </div>
+        </aside>
+      </div>
+
+      <div class="charts-grid">
+        <article class="panel chart-panel">
+          <div class="chart-heading"><div><span class="micro-eyebrow">CHART / 01</span><h3>Время отсечения от глубины</h3></div><span class="chart-unit">мс / запрос</span></div>
+          <div class="chart-legend"><span><i class="legend-line chart-sage"></i>query + clip</span><span class="chart-legend-note">48 положений окна и базы</span></div>
+          <div class="chart-area" id="depthChart"><div class="chart-empty"><span>↗</span><p>Запустите замер глубины,<br>чтобы построить график</p></div></div>
+          <div class="chart-footer"><span>максимальная глубина Quadtree</span><span id="depthChartMeta">500 000 отрезков</span></div>
+        </article>
+        <article class="panel chart-panel">
+          <div class="chart-heading"><div><span class="micro-eyebrow">CHART / 02</span><h3>Время от плотности данных</h3></div><span class="chart-unit">мс / запрос</span></div>
+          <div class="chart-legend"><span><i class="legend-line chart-sage"></i>Quadtree</span><span><i class="legend-line chart-clay"></i>полный перебор</span></div>
+          <div class="chart-area" id="densityChart"><div class="chart-empty"><span>↗</span><p>Запустите замер плотности,<br>чтобы сравнить индекс и O(N)</p></div></div>
+          <div class="chart-footer"><span>число отрезков в базе</span><span id="densityChartMeta">25k … 500k</span></div>
+        </article>
+      </div>
+      <div class="method-strip">
+        <div><span class="micro-eyebrow">MEASUREMENT NOTE</span><h3>Что именно измеряется</h3><p>На одинаковых положениях окна и групп замеряются запрос, AABB-префильтр и отсечение методом Лианга–Барски. Подготовка окна, отрисовка базового слоя и обновление DOM исключены. На результат влияют браузер, CPU и фоновая нагрузка.</p></div>
+        <div class="method-pills"><span><b>Quadtree</b> запрос по области</span><span><b>60 FPS</b> цель</span><span><b>500 000</b> отрезков</span></div>
+      </div>
+    </section>
+
+    <section id="tests" aria-labelledby="testsTitle">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">05</span>
+          <h2 id="testsTitle">Тест-кейсы</h2>
+          <p>Вырожденные случаи, границы, вершины окна, дыры и самопересечения — с автоматической проверкой.</p>
+        </div>
+        <div class="performance-actions">
+          <span class="test-summary" id="testSummary"><b>—</b> пройдено</span>
+          <button class="button-secondary" id="runTests" type="button"><span>↻</span> Перезапустить</button>
+        </div>
+      </div>
+      <article class="panel tests-panel">
+        <div class="test-markers">
+          <span><i class="marker boundary"></i> граница окна</span>
+          <span><i class="marker degenerate"></i> вырожденный отрезок</span>
+          <span><i class="marker vertex"></i> вершина окна</span>
+          <span><i class="marker hole"></i> дыра</span>
+          <span><i class="marker self"></i> самопересечение</span>
+        </div>
+        <div class="table-wrap test-table-wrap">
+          <table class="data-table test-table">
+            <thead><tr><th></th><th>Тест</th><th>Что проверяется</th><th>Детали</th><th>Статус</th></tr></thead>
+            <tbody id="testBody"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="report-row">
+      <div>
+        <span class="micro-eyebrow">DELIVERABLES</span>
+        <h2>Аналитический отчёт</h2>
+        <p>Методика замеров, ε-политика, формулы алгоритмов и структура пространственного индекса.</p>
+      </div>
+      <div class="report-actions">
+        <a class="button-secondary" href="report.md" download><span>↓</span> report.md</a>
+        <a class="button-ghost" href="README.md" download><span>↗</span> README</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Сазерленд–Коэн · Лианг–Барски · Сайрус–Бек · Сазерленд–Ходжман · Уайлер–Атертон · Quadtree</p>
+    <a href="#top" class="to-top">Наверх ↑</a>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="geometry.js"></script>
+  <script src="polygon.js"></script>
+  <script src="quadtree.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
